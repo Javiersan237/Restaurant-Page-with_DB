@@ -208,8 +208,8 @@ Este proyecto está bajo la Licencia MIT. Ver [LICENSE](LICENSE) para más detal
 
 ## 👥 Autores
 
-- **Javier Sánchez** — [@Javiersan237](https://github.com/Javiersan237)
-- **Fernando** — [@tu-usuario](https://github.com/tu-usuario)
+- **Javier Aram** — [@Javiersan237](https://github.com/Javiersan237)
+- **Angela Sofía** — [@tu-usuario](http://github.com/estrella18iortiz-byte)
 
 ---
 
