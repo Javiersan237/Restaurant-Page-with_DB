@@ -9,7 +9,7 @@ Documentación técnica del sistema de reservas del restaurante **ÉLYSÉE**.
   - [Clientes](./tablas/01-clientes.md)
   - [Mesas](./tablas/02-mesas.md)
   - [Reservaciones](./tablas/03-reservaciones.md)
-- [Decisiones Técnicas](./decisiones.md) *(pendiente)*
+- [Decisiones Técnicas](./decisiones.md)
 - [Especificación de la API](./API.md) *(pendiente)*
 - [Guía de Contribución](./guia-contribucion.md) *(pendiente)*
 - [Guía de Despliegue](./guia-despliegue.md) *(pendiente)*
