@@ -1,0 +1,42 @@
+{
+  "name": "elysee-reservas-backend",
+  "version": "0.1.0",
+  "description": "API REST del sistema de reservas del restaurante ELYSEE",
+  "main": "src/server.js",
+  "private": true,
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest --coverage",
+    "test:watch": "jest --watch",
+    "lint": "eslint src/**/*.js",
+    "lint:fix": "eslint src/**/*.js --fix",
+    "format": "prettier --write \"src/**/*.js\""
+  },
+  "keywords": [
+    "restaurant",
+    "reservations",
+    "express",
+    "sqlserver"
+  ],
+  "author": "Equipo ELYSEE",
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "cors": "^2.8.6",
+    "dotenv": "^18.0.4",
+    "express": "^5.2.1",
+    "helmet": "^8.3.0",
+    "morgan": "^1.12.1",
+    "mssql": "^12.7.2"
+  },
+  "devDependencies": {
+    "eslint": "^10.11.0",
+    "jest": "^30.5.2",
+    "nodemon": "^3.1.14",
+    "prettier": "^3.9.9",
+    "supertest": "^7.3.0"
+  }
+}
