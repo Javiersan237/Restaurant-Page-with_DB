@@ -5,14 +5,17 @@
   "main": "src/server.js",
   "private": true,
   "scripts": {
-    "start": "node src/server.js",
-    "dev": "nodemon src/server.js",
-    "test": "jest --coverage",
-    "test:watch": "jest --watch",
-    "test:db": "node scripts/test-db.js",
-    "lint": "eslint src/**/*.js",
-    "lint:fix": "eslint src/**/*.js --fix",
-    "format": "prettier --write \"src/**/*.js\""
+  "start": "node src/server.js",
+  "dev": "nodemon src/server.js",
+  "test": "jest --coverage --runInBand --detectOpenHandles",
+  "test:watch": "jest --watch",
+  "test:db": "node scripts/test-db.js",
+  "db:up": "docker-compose -f ../docker-compose.yml up -d",
+  "db:down": "docker-compose -f ../docker-compose.yml down",
+  "db:logs": "docker-compose -f ../docker-compose.yml logs -f sqlserver",
+  "lint": "eslint src/**/*.js",
+  "lint:fix": "eslint src/**/*.js --fix",
+  "format": "prettier --write \"src/**/*.js\""
   },
   "keywords": [
     "restaurant",

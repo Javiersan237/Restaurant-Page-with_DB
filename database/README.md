@@ -184,6 +184,94 @@ Revisar la sección "Reglas para agregar nuevas migraciones".
 - **sqlcmd** — CLI para automatización
 - **Docker** — para levantar SQL Server sin instalación
 
+## SQL Server en Docker (opcional)
+
+Para desarrollo sin instalar SQL Server en tu máquina, puedes usar
+Docker. Requiere **Docker Desktop** instalado.
+
+### Levantar el contenedor
+
+Desde la carpeta `backend/`:
+
+```cmd
+npm run db:up
+```
+
+O desde la raíz del proyecto:
+
+```cmd
+docker-compose up -d
+```
+
+La primera vez descarga la imagen (~1.5 GB) y tarda unos minutos.
+El contenedor tarda ~30 segundos en estar listo.
+
+### Verificar que está corriendo
+
+```cmd
+docker ps
+```
+
+Debe mostrar `elysee-sqlserver` en estado `healthy`.
+
+O verificar con el script de prueba:
+
+```cmd
+cd backend
+npm run test:db
+```
+
+### Detener el contenedor
+
+```cmd
+npm run db:down
+```
+
+### Ver logs
+
+```cmd
+npm run db:logs
+```
+
+### Variables de entorno
+
+El contenedor lee las variables del archivo `.env` de la raíz (o usa
+valores por defecto):
+
+| Variable | Default | Descripción |
+|----------|---------|-------------|
+| `DB_PASSWORD` | `Elysee2026!SA` | Contraseña del usuario `sa` |
+| `DB_PORT` | `1433` | Puerto del host donde escucha SQL Server |
+
+### Persistencia de datos
+
+Los datos se guardan en un volumen Docker llamado `elysee-sqlserver-data`.
+**No se pierden** al detener el contenedor.
+
+Para borrar **todo** (incluyendo datos):
+
+```cmd
+docker-compose down -v
+```
+
+⚠️ **Cuidado**: `-v` borra el volumen con los datos.
+
+### Puertos
+
+El contenedor expone el puerto 1433 internamente. Se mapea al puerto
+del host definido en `DB_PORT` (default: 1433).
+
+Si ya tienes SQL Server instalado en el puerto 1433, cambia `DB_PORT`
+en el `.env` a otro (por ejemplo, 1434):
+
+```
+DB_PORT=1434
+```
+
+Y ajusta `backend/.env` para usar ese puerto.
+
+---
+
 ## Documentación relacionada
 
 - [Diagrama ERD](../docs/ERD.md)

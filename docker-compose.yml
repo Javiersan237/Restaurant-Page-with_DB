@@ -1,0 +1,40 @@
+# =====================================================================
+# ELYSEE RESERVAS - Docker Compose
+# =====================================================================
+# Levanta SQL Server 2022 en un contenedor para desarrollo.
+# Uso: docker-compose up -d
+# =====================================================================
+
+services:
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: elysee-sqlserver
+    hostname: elysee-sqlserver
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "${DB_PASSWORD:-Elysee2026!SA}"
+      MSSQL_PID: "Developer"
+      MSSQL_MEMORY_LIMIT_MB: 2048
+    ports:
+      - "${DB_PORT:-1433}:1433"
+    volumes:
+      - elysee-sqlserver-data:/var/opt/mssql
+    healthcheck:
+      test:
+        - "CMD-SHELL"
+        - "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -Q 'SELECT 1' || exit 1"
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    networks:
+      - elysee-network
+
+volumes:
+  elysee-sqlserver-data:
+    driver: local
+
+networks:
+  elysee-network:
+    driver: bridge
