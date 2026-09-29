@@ -141,6 +141,34 @@ SELECT COUNT(*) AS TotalMesas, SUM(Capacidad) AS CapacidadTotal FROM dbo.Mesas;
 -- Esperado: 13 mesas, 50 personas
 ```
 
+## Ejecutar los tests
+
+Los tests validan que los constraints y queries funcionan correctamente.
+**No modifican datos reales** (usan TRANSACTIONS con ROLLBACK).
+
+### Archivos
+
+| Archivo | Propósito |
+|---------|-----------|
+| `tests/test_constraints.sql` | Valida CHECK, FK, UNIQUE |
+| `tests/test_queries.sql` | Valida las queries y la estructura |
+
+### Cómo ejecutarlos
+
+1. Abre SSMS y conéctate a `ElyseeDB` con `sa`.
+2. Abre `tests/test_constraints.sql`.
+3. Ejecuta con `F5`.
+4. Revisa la tabla de resultados al final.
+5. Repite con `tests/test_queries.sql`.
+
+### Interpretación de resultados
+
+- **OK**: el test pasó (el constraint o query se comporta como se espera).
+- **FALLO**: el test falló (algo cambió y hay que revisar).
+
+Si algún test **falla**, significa que un constraint fue modificado o eliminado.
+Revisar la sección "Reglas para agregar nuevas migraciones".
+
 ## Reglas para agregar nuevas migraciones
 
 1. **Nunca editar** una migración existente. Si necesitas cambiar algo, crea una nueva migración.
