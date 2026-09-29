@@ -69,7 +69,99 @@ async function obtenerPorId(mesaID) {
   return mesa;
 }
 
+/**
+ * Lista mesas disponibles para un bloque de tiempo.
+ * Valida todos los parámetros de entrada.
+ *
+ * @param {Object} params - { fecha, horaInicio, duracionMin, personas }
+ * @returns {Promise<Object>} { mesas, consulta }
+ */
+async function listarDisponibles({ fecha, horaInicio, duracionMin, personas }) {
+  // Validar fecha
+  if (!fecha) {
+    const error = new Error('El parametro fecha es requerido (YYYY-MM-DD)');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+  const fechaRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!fechaRegex.test(fecha)) {
+    const error = new Error('Formato de fecha invalido. Use YYYY-MM-DD');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  // Validar horaInicio
+  if (!horaInicio) {
+    const error = new Error('El parametro horaInicio es requerido (HH:MM)');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+  const horaRegex = /^\d{2}:\d{2}$/;
+  if (!horaRegex.test(horaInicio)) {
+    const error = new Error('Formato de horaInicio invalido. Use HH:MM');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  // Validar duracionMin
+  const duracion = parseInt(duracionMin, 10);
+  if (Number.isNaN(duracion) || duracion < 30 || duracion > 180) {
+    const error = new Error('duracionMin debe estar entre 30 y 180 minutos');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  // Validar personas
+  const numPersonas = parseInt(personas, 10);
+  if (Number.isNaN(numPersonas) || numPersonas < 1 || numPersonas > 20) {
+    const error = new Error('personas debe estar entre 1 y 20');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  // Calcular horaFin
+  const [horas, minutos] = horaInicio.split(':').map(Number);
+  const totalMinutos = horas * 60 + minutos + duracion;
+  const horaFinHoras = Math.floor(totalMinutos / 60);
+  const horaFinMinutos = totalMinutos % 60;
+
+  if (horaFinHoras > 23) {
+    const error = new Error('El horario excede las 23:00 (cierre del restaurante)');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  const horaFin = `${String(horaFinHoras).padStart(2, '0')}:${String(horaFinMinutos).padStart(2, '0')}`;
+
+  // Buscar mesas disponibles
+  const mesas = await mesaModel.findDisponibles({
+    fecha,
+    horaInicio,
+    horaFin,
+    personas: numPersonas,
+  });
+
+  return {
+    mesas,
+    consulta: {
+      fecha,
+      horaInicio,
+      horaFin,
+      duracionMin: duracion,
+      personas: numPersonas,
+    },
+  };
+}
+
 module.exports = {
   listar,
   obtenerPorId,
+  listarDisponibles,
 };

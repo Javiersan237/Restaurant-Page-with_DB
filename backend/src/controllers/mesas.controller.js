@@ -48,7 +48,35 @@ async function obtenerPorId(req, res, next) {
   }
 }
 
+/**
+ * GET /api/mesas/disponibles
+ * Lista mesas disponibles para una fecha, hora y duración específicas.
+ */
+async function listarDisponibles(req, res, next) {
+  try {
+    const params = {
+      fecha: req.query.fecha,
+      horaInicio: req.query.horaInicio,
+      duracionMin: req.query.duracionMin,
+      personas: req.query.personas,
+    };
+
+    const resultado = await mesasService.listarDisponibles(params);
+
+    res.json({
+      data: resultado.mesas,
+      meta: {
+        total: resultado.mesas.length,
+        consulta: resultado.consulta,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   listar,
   obtenerPorId,
+  listarDisponibles,
 };
