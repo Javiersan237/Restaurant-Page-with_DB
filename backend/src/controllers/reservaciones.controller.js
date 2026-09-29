@@ -1,0 +1,31 @@
+// =====================================================================
+// ELYSEE RESERVAS - Backend
+// =====================================================================
+// Controlador de Reservaciones.
+// =====================================================================
+
+const reservacionesService = require('../services/reservaciones.service');
+
+/**
+ * POST /api/reservaciones
+ * Crea una reservacion con validaciones completas.
+ */
+async function crear(req, res, next) {
+  try {
+    const { reservacion, agendaCreada } = await reservacionesService.crear(req.body);
+
+    res.status(201).json({
+      data: reservacion,
+      meta: {
+        agendaCreada,
+        message: 'Reservacion creada exitosamente',
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
+module.exports = {
+  crear,
+};

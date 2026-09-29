@@ -41,7 +41,7 @@ app.get('/', (req, res) => {
 // ---------------------------------------------------------------------
 app.use('/api/mesas', require('./routes/mesas.routes'));
 app.use('/api/clientes', require('./routes/clientes.routes'));
-// app.use('/api/reservaciones', require('./routes/reservaciones.routes'));
+app.use('/api/reservaciones', require('./routes/reservaciones.routes'));
 
 // ---------------------------------------------------------------------
 // Endpoint temporal de prueba de conexion a la BD
