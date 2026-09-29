@@ -41,6 +41,37 @@ app.get('/', (req, res) => {
 // app.use('/api/mesas', require('./routes/mesas.routes'));
 // app.use('/api/reservaciones', require('./routes/reservaciones.routes'));
 
+// ---------------------------------------------------------------------
+// Endpoint temporal de prueba de conexion a la BD
+// (se elimina cuando haya endpoints reales)
+// ---------------------------------------------------------------------
+app.get('/api/db-test', async (req, res, next) => {
+  try {
+    const { getPool } = require('./config/database');
+    const pool = await getPool();
+
+    const versionResult = await pool.request().query('SELECT @@VERSION AS version');
+    const tablesResult = await pool.request().query(`
+      SELECT TABLE_NAME 
+      FROM INFORMATION_SCHEMA.TABLES 
+      WHERE TABLE_TYPE = 'BASE TABLE'
+      ORDER BY TABLE_NAME
+    `);
+    const mesasResult = await pool.request().query('SELECT COUNT(*) AS total FROM Mesas');
+
+    res.json({
+      status: 'ok',
+      database: {
+        version: versionResult.recordset[0].version.split('\n')[0],
+        tables: tablesResult.recordset.map((t) => t.TABLE_NAME),
+        mesas_count: mesasResult.recordset[0].total,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
 app.use((req, res) => {
   res.status(404).json({
     error: {
