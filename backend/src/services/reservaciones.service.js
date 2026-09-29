@@ -224,6 +224,32 @@ async function crear(body) {
   }
 }
 
+/**
+ * Obtiene una reservacion por ID con todos sus datos relacionados.
+ * @param {number} reservacionID
+ * @returns {Promise<Object>}
+ */
+async function obtenerPorId(reservacionID) {
+  const id = parseInt(reservacionID, 10);
+  if (Number.isNaN(id) || id < 1) {
+    const error = new Error('reservacionID debe ser un numero positivo');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  const reservacion = await reservacionModel.findById(id);
+  if (!reservacion) {
+    const error = new Error(`No se encontro la reservacion con ID ${id}`);
+    error.status = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  return reservacion;
+}
+
 module.exports = {
   crear,
+  obtenerPorId,
 };

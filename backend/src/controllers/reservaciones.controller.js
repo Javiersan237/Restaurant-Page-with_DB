@@ -26,6 +26,23 @@ async function crear(req, res, next) {
   }
 }
 
+/**
+ * GET /api/reservaciones/:id
+ * Obtiene una reservacion por ID.
+ */
+async function obtenerPorId(req, res, next) {
+  try {
+    const reservacion = await reservacionesService.obtenerPorId(req.params.id);
+
+    res.json({
+      data: reservacion,
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   crear,
+  obtenerPorId,
 };

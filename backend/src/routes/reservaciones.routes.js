@@ -12,4 +12,7 @@ const router = express.Router();
 // POST /api/reservaciones
 router.post('/', reservacionesController.crear);
 
+// GET /api/reservaciones/:id
+router.get('/:id', reservacionesController.obtenerPorId);
+
 module.exports = router;
