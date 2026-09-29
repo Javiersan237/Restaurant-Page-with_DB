@@ -395,6 +395,82 @@ proyecto. Los criterios son:
 
 ---
 
+## ADR-006: Adopción de tabla Agendas (modelo 3 → 4 tablas)
+
+**Fecha**: 2026-09-28
+**Estado**: Aceptada
+**Decisor**: Equipo de desarrollo
+
+### Contexto
+
+El modelo original de 3 tablas (`Clientes`, `Mesas`, `Reservaciones`) tenía
+dos limitaciones:
+
+1. **No había forma de agrupar reservaciones** por bloque de tiempo.
+2. **La duración de reservación era fija** (asumida en 2 horas), sin
+   flexibilidad para reservas cortas o largas.
+3. **La validación de solapamiento** era implícita, basada en comparación de
+   horas concretas, sin una entidad que representara el "bloque reservable".
+
+El equipo solicitó agregar una tabla `Agendas` que representara bloques de
+tiempo reservables, con duración variable (30–180 min).
+
+### Decisión
+
+Adoptar un **modelo de 4 tablas** con `Agendas` como tabla principal y
+`Reservaciones` como tabla puente.
+
+**Estructura**:
+
+- `Clientes` (PK: `ClienteID`)
+- `Mesas` (PK: `MesaID`)
+- `Agendas` (PK: `AgendaID`)
+- `Reservaciones` (PK: `ReservacionID`, FKs: `ClienteID`, `MesaID`, `AgendaID`)
+
+**Reglas**:
+
+- Relación: 1 Agenda → N Reservaciones
+- Solapamiento: validado por **MESA**, no por agenda
+- Duración: elegida por el cliente, máx 180 min
+- Capacidad: 50 personas globales (suma de 13 mesas)
+- Ciclo de vida: creación automática + eliminación lazy
+
+### Justificación
+
+- **Flexibilidad**: permite reservas de 30, 60, 90, 120, 150 o 180 minutos.
+- **Validación precisa**: el solapamiento se calcula con intervalos exactos
+  (`HoraInicio` y `HoraFin`), no con horas puntuales.
+- **Sin redundancia**: `Fecha`, `HoraInicio`, `HoraFin` viven solo en
+  `Agendas`, y cada reserva apunta a una agenda.
+- **Escalabilidad**: si mañana se agrega un turno ("Comida", "Cena"), se puede
+  extender `Agendas` con una columna `Turno` sin tocar `Reservaciones`.
+- **Reportes**: se pueden agrupar reservas por bloque de tiempo con facilidad.
+
+### Consecuencias
+
+**Positivas**:
+
+- Modelo más expresivo y flexible.
+- Validación de solapamiento robusta.
+- Mejor base para reportes por turno/bloque.
+
+**Negativas**:
+
+- Más complejidad en backend: hay que crear/buscar agendas antes de insertar.
+- Requiere una tabla más y una FK más.
+- Migración de las 4 migraciones existentes (renumeración).
+
+### Alternativas consideradas
+
+1. **Sin tabla Agendas**: descartada porque la duración fija de 2 horas
+   era demasiado rígida.
+2. **Agenda como tabla de solo lectura (pre-creada)**: descartada porque
+   requiere panel de admin y no escala bien.
+3. **Agenda con duración fija de 3 horas**: considerada pero descartada
+   porque no refleja la realidad de reservas cortas.
+
+---
+
 ## Cómo agregar un nuevo ADR
 
 1. Copiar la plantilla de la sección "Plantilla" abajo.

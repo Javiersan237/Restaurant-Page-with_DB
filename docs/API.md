@@ -371,19 +371,21 @@ consume el flujo principal de reservación.
 
 ### POST /api/reservaciones
 
-Crea una reservación nueva. Este endpoint **valida disponibilidad en una
-transacción** para prevenir doble reservación.
+Crea una reservación nueva. Busca o crea la agenda correspondiente, valida
+solapamiento por mesa, verifica capacidad global y guarda todo en
+transacción.
 
 **Método**: `POST`
 **URL**: `/api/reservaciones`
-**Body:**
+**Body**:
 
 ```json
 {
   "clienteID": 1,
   "mesaID": 5,
   "fecha": "2026-10-15",
-  "hora": "20:00",
+  "horaInicio": "19:00",
+  "duracionMin": 120,
   "numeroPersonas": 4,
   "notas": "Aniversario, vista jardín"
 }
@@ -402,13 +404,14 @@ cliente en lugar de `clienteID`:
   },
   "mesaID": 5,
   "fecha": "2026-10-15",
-  "hora": "20:00",
+  "horaInicio": "19:00",
+  "duracionMin": 120,
   "numeroPersonas": 4,
   "notas": "Aniversario"
 }
 ```
 
-**Campos:**
+**Campos**:
 
 | Campo | Tipo | Requerido | Validación |
 |-------|------|:---------:|------------|
@@ -416,16 +419,32 @@ cliente en lugar de `clienteID`:
 | `cliente` | object | ⚠️ | Uno de los dos |
 | `mesaID` | int | ✅ | Debe existir |
 | `fecha` | string (`YYYY-MM-DD`) | ✅ | Hoy o futuro |
-| `hora` | string (`HH:MM`) | ✅ | Formato válido |
+| `horaInicio` | string (`HH:MM`) | ✅ | Entre 08:00 y 23:00 |
+| `duracionMin` | int | ✅ | Entre 30 y 180 |
 | `numeroPersonas` | int | ✅ | 1–20, ≤ capacidad de la mesa |
 | `notas` | string | ❌ | ≤300 caracteres |
 
-**Response 201:**
+**Lógica**:
+
+1. Calcula `HoraFin = HoraInicio + duracionMin`.
+2. Busca o crea la agenda `(Fecha, HoraInicio, HoraFin)`.
+3. Valida solapamiento **por mesa** (regla de solapamiento de intervalos).
+4. Valida capacidad global del restaurante (50 personas en ese bloque).
+5. Inserta la reservación dentro de una transacción.
+
+**Response 201**:
 
 ```json
 {
   "data": {
     "reservacionID": 1,
+    "agenda": {
+      "agendaID": 3,
+      "fecha": "2026-10-15",
+      "horaInicio": "19:00",
+      "horaFin": "21:00",
+      "duracionMin": 120
+    },
     "cliente": {
       "clienteID": 1,
       "nombre": "Sofía",
@@ -435,31 +454,51 @@ cliente en lugar de `clienteID`:
     "mesa": {
       "mesaID": 5,
       "numeroMesa": "S2",
-      "ubicacion": "Salón Principal",
+      "ubicacion": "Salon Principal",
       "capacidad": 4
     },
-    "fecha": "2026-10-15",
-    "hora": "20:00",
     "numeroPersonas": 4,
     "estado": "Pendiente",
     "notas": "Aniversario, vista jardín",
-    "fechaCreacion": "2026-09-27T19:30:00Z"
+    "fechaCreacion": "2026-09-29T19:30:00Z"
   }
 }
 ```
 
-**Response 409 (mesa ya reservada):**
+**Response 409 (mesa ya reservada en ese horario)**:
 
 ```json
 {
   "error": {
     "code": "TABLE_ALREADY_RESERVED",
-    "message": "La mesa S2 ya está reservada en ese horario"
+    "message": "La mesa S2 ya está reservada en un horario que se solapa con 19:00-21:00"
   }
 }
 ```
 
-**Response 422 (fecha en el pasado):**
+**Response 409 (restaurante lleno)**:
+
+```json
+{
+  "error": {
+    "code": "RESTAURANT_FULL",
+    "message": "El restaurante alcanzó su capacidad máxima de 50 personas en ese horario"
+  }
+}
+```
+
+**Response 422 (duración inválida)**:
+
+```json
+{
+  "error": {
+    "code": "INVALID_DURATION",
+    "message": "La duración debe estar entre 30 y 180 minutos"
+  }
+}
+```
+
+**Response 422 (fecha en el pasado)**:
 
 ```json
 {
@@ -470,7 +509,7 @@ cliente en lugar de `clienteID`:
 }
 ```
 
-**Response 422 (capacidad excedida):**
+**Response 422 (capacidad excedida)**:
 
 ```json
 {
@@ -588,6 +627,56 @@ Cambia el estado de una reservación (confirmar, cancelar, completar, no-show).
   "error": {
     "code": "NOT_FOUND",
     "message": "No se encontró la reservación con ID 1"
+  }
+}
+```
+---
+
+### GET /api/agendas
+
+Lista las agendas activas (no vencidas). El backend ejecuta **limpieza lazy**
+antes de responder, eliminando agendas vencidas sin reservaciones asociadas.
+
+**Método**: `GET`
+**URL**: `/api/agendas`
+**Query params**:
+
+| Param | Tipo | Requerido | Descripción |
+|-------|------|:---------:|-------------|
+| `fecha` | string (`YYYY-MM-DD`) | ❌ | Filtrar por fecha específica |
+| `estado` | string | ❌ | `Abierta` o `Cerrada` |
+
+**Ejemplo**: `/api/agendas?fecha=2026-10-15&estado=Abierta`
+
+**Response 200**:
+
+```json
+{
+  "data": [
+    {
+      "agendaID": 3,
+      "fecha": "2026-10-15",
+      "horaInicio": "19:00",
+      "horaFin": "21:00",
+      "duracionMin": 120,
+      "estado": "Abierta",
+      "reservacionesActivas": 2,
+      "personasOcupadas": 8
+    },
+    {
+      "agendaID": 4,
+      "fecha": "2026-10-15",
+      "horaInicio": "20:00",
+      "horaFin": "22:00",
+      "duracionMin": 120,
+      "estado": "Abierta",
+      "reservacionesActivas": 1,
+      "personasOcupadas": 4
+    }
+  ],
+  "meta": {
+    "total": 2,
+    "limpiezaEjecutada": true
   }
 }
 ```

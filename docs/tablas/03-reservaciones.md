@@ -14,12 +14,14 @@ información operativa de cada evento.
 | `ReservacionID` | `INT IDENTITY(1,1)` | ❌ | auto | Identificador único |
 | `ClienteID` | `INT` | ❌ | — | FK → Clientes.ClienteID |
 | `MesaID` | `INT` | ❌ | — | FK → Mesas.MesaID |
-| `Fecha` | `DATE` | ❌ | — | Fecha de la reservación |
-| `Hora` | `TIME(0)` | ❌ | — | Hora de llegada |
+| `AgendaID` | `INT` | ❌ | — | FK → Agendas.AgendaID |
 | `NumeroPersonas` | `INT` | ❌ | — | Número de comensales |
 | `Estado` | `NVARCHAR(20)` | ❌ | `'Pendiente'` | Estado del ciclo de vida |
-| `Notas` | `NVARCHAR(300)` | ✅ | `NULL` | Peticiones especiales del cliente |
+| `Notas` | `NVARCHAR(300)` | ✅ | `NULL` | Peticiones especiales |
 | `FechaCreacion` | `DATETIME` | ❌ | `GETDATE()` | Timestamp de creación |
+
+**Nota**: los campos `Fecha` y `Hora` ya no existen en `Reservaciones`.
+Se obtienen vía `AgendaID` (que tiene `Fecha`, `HoraInicio`, `HoraFin`).
 
 ## Valores permitidos
 
@@ -40,9 +42,9 @@ información operativa de cada evento.
 | `PK_Reservaciones` | Primary Key | `ReservacionID` | Identificador único |
 | `FK_Reservaciones_Clientes` | Foreign Key | `ClienteID` | → `Clientes(ClienteID)` · `ON DELETE CASCADE` |
 | `FK_Reservaciones_Mesas` | Foreign Key | `MesaID` | → `Mesas(MesaID)` · `ON DELETE NO ACTION` |
+| `FK_Reservaciones_Agendas` | Foreign Key | `AgendaID` | → `Agendas(AgendaID)` · `ON DELETE NO ACTION` |
 | `CK_Reservaciones_Estado` | Check | `Estado` | Solo valores permitidos |
 | `CK_Reservaciones_Personas` | Check | `NumeroPersonas` | Entre 1 y 20 |
-| `CK_Reservaciones_Fecha` | Check | `Fecha` | Debe ser hoy o futuro |
 
 ## Índices
 
