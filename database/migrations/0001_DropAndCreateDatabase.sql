@@ -36,14 +36,14 @@ END
 CREATE DATABASE ElyseeDB
 ON PRIMARY (
     NAME        = 'ElyseeDB_Data',
-    FILENAME    = 'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\ElyseeDB.mdf',
+    FILENAME    = 'C:\Program Files\Microsoft SQL Server\MSSQL17.SQLEXPRESS\MSSQL\DATA\ElyseeDB.mdf',
     SIZE        = 10MB,
     MAXSIZE     = 500MB,
     FILEGROWTH  = 10MB
 )
 LOG ON (
     NAME        = 'ElyseeDB_Log',
-    FILENAME    = 'C:\Program Files\Microsoft SQL Server\MSSQL16.SQLEXPRESS\MSSQL\DATA\ElyseeDB_log.ldff',
+    FILENAME    = 'C:\Program Files\Microsoft SQL Server\MSSQL17.SQLEXPRESS\MSSQL\DATA\ElyseeDB_log.ldff',
     SIZE        = 5MB,
     MAXSIZE     = 100MB,
     FILEGROWTH  = 5MB

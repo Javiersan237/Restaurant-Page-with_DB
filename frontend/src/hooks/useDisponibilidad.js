@@ -6,7 +6,7 @@ import { mesasDisponibles } from '../services/mesas.api'
  *
  * Uso:
  *   const { mesas, cargando, error, consultar } = useDisponibilidad()
- *   consultar({ fecha: '2026-10-01', hora: '20:00', personas: 4 })
+ *   consultar({ fecha: '2026-10-01', horaInicio: '20:00', duracionMin: 120, personas: 4 })
  *
  * @returns {Object} { mesas, cargando, error, consultar }
  */
@@ -15,8 +15,8 @@ export function useDisponibilidad() {
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
 
-  const consultar = useCallback(async ({ fecha, hora, personas }) => {
-    if (!fecha || !hora || !personas) {
+  const consultar = useCallback(async ({ fecha, horaInicio, duracionMin, personas }) => {
+    if (!fecha || !horaInicio || !duracionMin || !personas) {
       setMesas([])
       return
     }
@@ -25,7 +25,7 @@ export function useDisponibilidad() {
     setError(null)
 
     try {
-      const respuesta = await mesasDisponibles({ fecha, hora, personas })
+      const respuesta = await mesasDisponibles({ fecha, horaInicio, duracionMin, personas })
       setMesas(respuesta?.data || [])
     } catch (err) {
       setError(err)
@@ -35,7 +35,7 @@ export function useDisponibilidad() {
     }
   }, [])
 
-  // Limpiar mesas si cambian los parámetros (opcional)
+  // Limpiar mesas al desmontar
   useEffect(() => {
     return () => {
       setMesas([])

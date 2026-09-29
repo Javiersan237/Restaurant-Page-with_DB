@@ -1,17 +1,21 @@
 /**
  * Tarjeta visual para mostrar una mesa.
  *
- * @param {Object} mesa         - Datos de la mesa (MesaID, NumeroMesa, Capacidad, Ubicacion)
+ * @param {Object} mesa         - Datos de la mesa (mesaID, numeroMesa, capacidad, ubicacion)
  * @param {boolean} seleccionada - Si esta mesa está seleccionada
  * @param {Function} onClick     - Callback al hacer clic
  */
 export default function MesaCard({ mesa, seleccionada = false, onClick }) {
-  const { MesaID, NumeroMesa, Capacidad, Ubicacion } = mesa
+  // Compatibilidad con camelCase (backend) y PascalCase (por si acaso)
+  const id = mesa.mesaID ?? mesa.MesaID
+  const numero = mesa.numeroMesa ?? mesa.NumeroMesa
+  const capacidad = mesa.capacidad ?? mesa.Capacidad
+  const ubicacion = mesa.ubicacion ?? mesa.Ubicacion
 
   return (
     <button
       type="button"
-      onClick={() => onClick?.(mesa)}
+      onClick={() => onClick?.({ ...mesa, mesaID: id })}
       className={`w-full text-left p-6 rounded border transition-all duration-300 ${
         seleccionada
           ? 'bg-vino-500/20 border-dorado-400 shadow-lg shadow-dorado-400/20'
@@ -20,7 +24,7 @@ export default function MesaCard({ mesa, seleccionada = false, onClick }) {
     >
       <div className="flex items-start justify-between mb-3">
         <h4 className="font-serif text-2xl text-dorado-400">
-          Mesa {NumeroMesa}
+          Mesa {numero}
         </h4>
         {seleccionada && (
           <span className="text-dorado-400 text-xl" aria-label="Seleccionada">
@@ -32,11 +36,11 @@ export default function MesaCard({ mesa, seleccionada = false, onClick }) {
       <div className="space-y-2 text-sm text-negro-100">
         <p className="flex items-center gap-2">
           <span className="text-dorado-400">👥</span>
-          <span>Capacidad: {Capacidad} personas</span>
+          <span>Capacidad: {capacidad} personas</span>
         </p>
         <p className="flex items-center gap-2">
           <span className="text-dorado-400">📍</span>
-          <span>{Ubicacion}</span>
+          <span>{ubicacion}</span>
         </p>
       </div>
     </button>

@@ -28,6 +28,9 @@ export default function ConfirmacionPage() {
     }
   }, [id])
 
+  // ==========================================
+  // Extraer campos (con soporte para anidados)
+  // ==========================================
   const r = reservacion || {}
   const cliente = r.cliente || {}
   const mesa = r.mesa || {}
@@ -38,19 +41,25 @@ export default function ConfirmacionPage() {
   const estado = r.estado ?? r.Estado ?? 'Pendiente'
   const notas = r.notas ?? r.Notas
 
+  // Fecha/hora vienen dentro de `agenda`
   const fecha = agenda.fecha ?? r.fecha ?? r.Fecha
   const horaInicio = agenda.horaInicio ?? r.horaInicio ?? r.HoraInicio
   const horaFin = agenda.horaFin ?? r.horaFin ?? r.HoraFin
   const duracionMin = agenda.duracionMin ?? r.duracionMin ?? r.DuracionMin
 
+  // Cliente
   const nombreCliente = cliente.nombre
     ? `${cliente.nombre} ${cliente.apellido || ''}`.trim()
     : null
   const emailCliente = cliente.email ?? null
 
+  // Mesa
   const mesaNumero = mesa.numeroMesa ?? r.numeroMesa
   const mesaUbicacion = mesa.ubicacion ?? r.ubicacion
 
+  // ==========================================
+  // Estados de carga / error
+  // ==========================================
   if (cargando) {
     return (
       <div className="min-h-[70vh] flex items-center justify-center">
@@ -77,11 +86,15 @@ export default function ConfirmacionPage() {
     )
   }
 
+  // ==========================================
+  // Vista
+  // ==========================================
   return (
     <div className="max-w-2xl mx-auto px-6 py-16">
+      {/* Ícono de éxito */}
       <div className="text-center mb-8">
         <div className="w-24 h-24 rounded-full border-2 border-dorado-400 flex items-center justify-center mx-auto mb-6">
-          <span className="text-dorado-400 text-5xl">OK</span>
+          <span className="text-dorado-400 text-5xl">✓</span>
         </div>
 
         <h1 className="font-serif text-4xl md:text-5xl text-dorado-400 mb-4">
@@ -93,6 +106,7 @@ export default function ConfirmacionPage() {
         </p>
       </div>
 
+      {/* Detalles */}
       <div className="bg-negro-800 border border-dorado-400/30 rounded-lg p-8 space-y-4">
         <div className="flex justify-between border-b border-dorado-400/20 pb-3">
           <span className="text-dorado-300 font-serif">Código</span>
@@ -110,7 +124,8 @@ export default function ConfirmacionPage() {
           <div className="flex justify-between border-b border-dorado-400/20 pb-3">
             <span className="text-dorado-300 font-serif">Horario</span>
             <span className="text-dorado-100">
-              {horaInicio}{horaFin ? ` – ${horaFin}` : ''}
+              {horaInicio}
+              {horaFin ? ` – ${horaFin}` : ''}
             </span>
           </div>
         )}
@@ -133,7 +148,8 @@ export default function ConfirmacionPage() {
           <div className="flex justify-between border-b border-dorado-400/20 pb-3">
             <span className="text-dorado-300 font-serif">Mesa</span>
             <span className="text-dorado-100">
-              {mesaNumero}{mesaUbicacion ? ` · ${mesaUbicacion}` : ''}
+              {mesaNumero}
+              {mesaUbicacion ? ` · ${mesaUbicacion}` : ''}
             </span>
           </div>
         )}
@@ -167,6 +183,7 @@ export default function ConfirmacionPage() {
         </div>
       </div>
 
+      {/* Botones */}
       <div className="mt-12 flex flex-col md:flex-row gap-4 justify-center">
         <Link
           to="/"

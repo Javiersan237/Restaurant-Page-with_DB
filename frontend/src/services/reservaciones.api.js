@@ -9,10 +9,11 @@ import api from './api'
  * Crea una nueva reservación.
  *
  * @param {Object} reservacion
- * @param {number} reservacion.clienteId       - ID del cliente
- * @param {number} reservacion.mesaId          - ID de la mesa
+ * @param {number} reservacion.clienteID       - ID del cliente
+ * @param {number} reservacion.mesaID          - ID de la mesa
  * @param {string} reservacion.fecha           - Fecha YYYY-MM-DD
- * @param {string} reservacion.hora            - Hora HH:MM
+ * @param {string} reservacion.horaInicio      - Hora HH:MM
+ * @param {number} reservacion.duracionMin     - Duración en minutos (30-180)
  * @param {number} reservacion.numeroPersonas  - Número de personas
  * @param {string} [reservacion.notas]         - Notas adicionales
  * @returns {Promise<Object>} La reservación creada
@@ -25,7 +26,7 @@ export async function crearReservacion(reservacion) {
  * Obtiene una reservación por su ID.
  *
  * @param {number|string} id
- * @returns {Promise<Object>} La reservación
+ * @returns {Promise<Object>} La reservación con cliente, mesa y agenda
  */
 export async function obtenerReservacion(id) {
   return api.get(`/reservaciones/${id}`)

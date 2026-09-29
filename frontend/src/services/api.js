@@ -3,12 +3,12 @@ import axios from 'axios'
 /**
  * Instancia central de axios para todas las llamadas a la API de ÉLYSÉE.
  *
- * - baseURL: /api (Vite lo redirige al backend en localhost:3000)
+ * - baseURL: usa VITE_API_URL si existe (localhost:3000/api en dev)
  * - timeout: 10 segundos
  * - Interceptores para manejo global de errores
  */
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3000/api',
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -46,7 +46,6 @@ api.interceptors.response.use(
     }
 
     if (error.response) {
-      // El servidor respondió con un status de error
       const { status, data } = error.response
       normalized.status = status
 
@@ -59,7 +58,6 @@ api.interceptors.response.use(
         normalized.message = data?.message || normalized.message
       }
     } else if (error.request) {
-      // La petición se hizo pero no hubo respuesta
       normalized.message = 'No se pudo conectar con el servidor'
     }
 
