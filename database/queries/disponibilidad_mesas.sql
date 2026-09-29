@@ -1,18 +1,19 @@
 -- =====================================================================
 -- QUERY: disponibilidad_mesas
 -- =====================================================================
--- Proposito : Devuelve las mesas disponibles para una fecha, hora y
---             numero de personas especificos.
+-- Proposito : Devuelve las mesas disponibles para un bloque de tiempo.
 -- Uso       : Endpoint GET /api/mesas/disponibles
 -- Parametros:
 --   @Fecha       DATE     - Fecha de la reservacion (ej: '2026-10-15')
---   @Hora        TIME(0)  - Hora de llegada (ej: '20:00')
+--   @HoraInicio  TIME(0)  - Hora de inicio (ej: '19:00')
+--   @HoraFin     TIME(0)  - Hora de fin (ej: '21:00')
 --   @Personas    INT      - Numero de comensales (ej: 4)
 -- Devuelve  : MesaID, NumeroMesa, Capacidad, Ubicacion
 -- Logica    :
 --   1. Filtra mesas con capacidad suficiente
 --   2. Filtra mesas marcadas como Disponibles
---   3. Excluye mesas con reservacion activa en ventana de +/-1 hora
+--   3. Excluye mesas con reservacion activa cuyo bloque SE SOLAPE
+--      con [@HoraInicio, @HoraFin]
 -- =====================================================================
 
 USE ElyseeDB;
@@ -21,9 +22,10 @@ GO
 -- ---------------------------------------------------------------------
 -- PARAMETROS (modificar para pruebas)
 -- ---------------------------------------------------------------------
-DECLARE @Fecha    DATE    = '2026-10-15';
-DECLARE @Hora     TIME(0) = '20:00';
-DECLARE @Personas INT     = 4;
+DECLARE @Fecha      DATE    = '2026-10-15';
+DECLARE @HoraInicio TIME(0) = '19:00';
+DECLARE @HoraFin    TIME(0) = '21:00';
+DECLARE @Personas   INT     = 4;
 
 -- ---------------------------------------------------------------------
 -- QUERY
@@ -39,8 +41,10 @@ WHERE m.Capacidad >= @Personas
   AND m.MesaID NOT IN (
       SELECT r.MesaID
       FROM dbo.Reservaciones r
-      WHERE r.Fecha = @Fecha
-        AND r.Hora BETWEEN DATEADD(HOUR, -1, @Hora) AND DATEADD(HOUR, 1, @Hora)
+      INNER JOIN dbo.Agendas a ON a.AgendaID = r.AgendaID
+      WHERE a.Fecha = @Fecha
+        AND a.HoraInicio < @HoraFin      -- condicion de solapamiento
+        AND a.HoraFin    > @HoraInicio
         AND r.Estado IN ('Pendiente', 'Confirmada')
   )
 ORDER BY 

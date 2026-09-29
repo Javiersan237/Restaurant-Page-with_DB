@@ -5,8 +5,8 @@
 -- Uso       : Endpoint GET /api/reservaciones?cliente=:id
 -- Parametros:
 --   @ClienteID   INT  - ID del cliente (ej: 1)
--- Devuelve  : ReservacionID, Fecha, Hora, NumeroPersonas, Estado,
---             NumeroMesa, Ubicacion, Notas, FechaCreacion
+-- Devuelve  : ReservacionID, Fecha, HoraInicio, HoraFin, DuracionMin,
+--             NumeroPersonas, Estado, NumeroMesa, Ubicacion, Notas
 -- Orden     : Mas recientes primero
 -- =====================================================================
 
@@ -23,8 +23,10 @@ DECLARE @ClienteID INT = 1;
 -- ---------------------------------------------------------------------
 SELECT 
     r.ReservacionID,
-    r.Fecha,
-    r.Hora,
+    a.Fecha,
+    a.HoraInicio,
+    a.HoraFin,
+    a.DuracionMin,
     r.NumeroPersonas,
     r.Estado,
     r.Notas,
@@ -33,7 +35,8 @@ SELECT
     m.Ubicacion,
     m.Capacidad
 FROM dbo.Reservaciones r
-INNER JOIN dbo.Mesas m ON m.MesaID = r.MesaID
+INNER JOIN dbo.Agendas a ON a.AgendaID = r.AgendaID
+INNER JOIN dbo.Mesas   m ON m.MesaID   = r.MesaID
 WHERE r.ClienteID = @ClienteID
-ORDER BY r.Fecha DESC, r.Hora DESC;
+ORDER BY a.Fecha DESC, a.HoraInicio DESC;
 GO
