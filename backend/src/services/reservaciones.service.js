@@ -10,6 +10,18 @@ const agendaModel = require('../models/agenda.model');
 const clienteModel = require('../models/cliente.model');
 const clientesService = require('./clientes.service');
 
+// Mapa de transiciones permitidas por estado
+const TRANSICIONES = {
+  Pendiente: ['Confirmada', 'Cancelada'],
+  Confirmada: ['Completada', 'Cancelada', 'NoShow'],
+  Cancelada: [],
+  Completada: [],
+  NoShow: [],
+};
+
+// Estados válidos
+const ESTADOS_VALIDOS = ['Pendiente', 'Confirmada', 'Cancelada', 'Completada', 'NoShow'];
+
 const CAPACIDAD_GLOBAL_RESTAURANTE = 50;
 const HORA_APERTURA = 8;
 const HORA_CIERRE = 23;
@@ -249,7 +261,62 @@ async function obtenerPorId(reservacionID) {
   return reservacion;
 }
 
+/**
+ * Cambia el estado de una reservacion con validacion de transiciones.
+ * @param {number} reservacionID
+ * @param {string} nuevoEstado
+ * @returns {Promise<Object>} Reservacion actualizada
+ */
+async function cambiarEstado(reservacionID, nuevoEstado) {
+  const id = parseInt(reservacionID, 10);
+  if (Number.isNaN(id) || id < 1) {
+    const error = new Error('reservacionID debe ser un numero positivo');
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  if (!nuevoEstado || !ESTADOS_VALIDOS.includes(nuevoEstado)) {
+    const error = new Error(`El estado debe ser uno de: ${ESTADOS_VALIDOS.join(', ')}`);
+    error.status = 400;
+    error.code = 'VALIDATION_ERROR';
+    throw error;
+  }
+
+  // Obtener el estado actual
+  const estadoActual = await reservacionModel.getEstado(id);
+  if (!estadoActual) {
+    const error = new Error(`No se encontro la reservacion con ID ${id}`);
+    error.status = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  // Verificar que la transicion este permitida
+  const permitidos = TRANSICIONES[estadoActual] || [];
+  if (!permitidos.includes(nuevoEstado)) {
+    const error = new Error(
+      `No se puede pasar de '${estadoActual}' a '${nuevoEstado}'`,
+    );
+    error.status = 422;
+    error.code = 'INVALID_STATE_TRANSITION';
+    error.details = {
+      estadoActual,
+      estadoSolicitado: nuevoEstado,
+      transicionesPermitidas: permitidos,
+    };
+    throw error;
+  }
+
+  // Actualizar
+  await reservacionModel.updateEstado(id, nuevoEstado);
+
+  // Devolver la reservacion completa actualizada
+  return reservacionModel.findById(id);
+}
+
 module.exports = {
   crear,
   obtenerPorId,
+  cambiarEstado,
 };

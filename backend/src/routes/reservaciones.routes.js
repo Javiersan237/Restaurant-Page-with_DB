@@ -15,4 +15,7 @@ router.post('/', reservacionesController.crear);
 // GET /api/reservaciones/:id
 router.get('/:id', reservacionesController.obtenerPorId);
 
+// PATCH /api/reservaciones/:id/estado
+router.patch('/:id/estado', reservacionesController.cambiarEstado);
+
 module.exports = router;

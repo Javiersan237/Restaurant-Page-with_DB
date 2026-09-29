@@ -196,6 +196,42 @@ function formatearReservacion(row) {
   };
 }
 
+/**
+ * Obtiene el estado actual de una reservacion.
+ * @param {number} reservacionID
+ * @returns {Promise<string|null>}
+ */
+async function getEstado(reservacionID) {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input('ReservacionID', sql.Int, reservacionID)
+    .query(`SELECT Estado FROM dbo.Reservaciones WHERE ReservacionID = @ReservacionID`);
+
+  return result.recordset[0] ? result.recordset[0].Estado : null;
+}
+
+/**
+ * Actualiza el estado de una reservacion.
+ * @param {number} reservacionID
+ * @param {string} nuevoEstado
+ * @returns {Promise<boolean>}
+ */
+async function updateEstado(reservacionID, nuevoEstado) {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input('ReservacionID', sql.Int, reservacionID)
+    .input('Estado', sql.NVarChar(20), nuevoEstado)
+    .query(`
+      UPDATE dbo.Reservaciones
+      SET Estado = @Estado
+      WHERE ReservacionID = @ReservacionID
+    `);
+
+  return result.rowsAffected[0] > 0;
+}
+
 module.exports = {
   countSolapamientosMesa,
   sumPersonasEnBloque,
@@ -203,4 +239,6 @@ module.exports = {
   create,
   findById,
   formatearReservacion,
+  getEstado,
+  updateEstado,
 };

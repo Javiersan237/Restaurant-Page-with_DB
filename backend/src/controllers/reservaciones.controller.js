@@ -42,7 +42,30 @@ async function obtenerPorId(req, res, next) {
   }
 }
 
+/**
+ * PATCH /api/reservaciones/:id/estado
+ * Cambia el estado de una reservacion.
+ */
+async function cambiarEstado(req, res, next) {
+  try {
+    const reservacion = await reservacionesService.cambiarEstado(
+      req.params.id,
+      req.body.estado,
+    );
+
+    res.json({
+      data: reservacion,
+      meta: {
+        message: `Estado cambiado a '${reservacion.estado}'`,
+      },
+    });
+  } catch (err) {
+    next(err);
+  }
+}
+
 module.exports = {
   crear,
   obtenerPorId,
+  cambiarEstado,
 };
