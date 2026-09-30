@@ -2,13 +2,20 @@
 
 [![Backend CI](https://github.com/Javiersan237/Restaurant-Page-with_DB/actions/workflows/backend-ci.yml/badge.svg)](https://github.com/Javiersan237/Restaurant-Page-with_DB/actions/workflows/backend-ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Version](https://img.shields.io/badge/version-0.1.0-blue)]()
+[![Version](https://img.shields.io/badge/version-1.0.0-blue)]()
 [![Node](https://img.shields.io/badge/node-%3E%3D18.x-brightgreen)]()
 [![SQL Server](https://img.shields.io/badge/sql%20server-%3E%3D2022-red)]()
 
 Sistema de gestión de reservas para el restaurante de alta cocina **ÉLYSÉE**.
 Permite a los clientes reservar mesas en línea y al restaurante administrar
 mesas, horarios, agendas y reservaciones desde una API REST moderna.
+
+## 🔗 Accesos Rápidos a Documentación
+- [Guía de Despliegue en Producción](./docs/guia-despliegue.md)
+- [Glosario del Sistema](./docs/glosario.md)
+- [Registro de Cambios (Changelog)](./CHANGELOG.md)
+- [Especificación de la API](./docs/API.md)
+- [Diagrama Entidad-Relación (ERD)](./docs/ERD.md)
 
 ---
 
