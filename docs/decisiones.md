@@ -11,6 +11,8 @@ el desarrollo del proyecto **ÉLYSÉE Reservas**, siguiendo el formato
 - [ADR-003: ON DELETE CASCADE en Clientes → Reservaciones](#adr-003-on-delete-cascade-en-clientes--reservaciones)
 - [ADR-004: Estado de reservación como atributo con CHECK](#adr-004-estado-de-reservación-como-atributo-con-check)
 - [ADR-005: Elección de stack tecnológico](#adr-005-elección-de-stack-tecnológico)
+- [ADR-006: Adopción de tabla Agendas (modelo 3 → 4 tablas)](#adr-006-adopción-de-tabla-agendas-modelo-3--4-tablas)
+- [ADR-007: Sistema de autenticación con JWT](#adr-007-sistema-de-autenticación-con-jwt)
 
 ---
 
@@ -330,6 +332,7 @@ proyecto. Los criterios son:
 | Estilos | Tailwind CSS | 3.x |
 | Cliente HTTP | Axios | 1.x |
 | Routing | React Router DOM | 6.x |
+| Autenticación | JWT + bcrypt | — |
 | Linting | ESLint + Prettier | — |
 | Testing backend | Jest + Supertest | — |
 | CI/CD | GitHub Actions | — |
@@ -357,6 +360,10 @@ proyecto. Los criterios son:
 - Estilizado rápido sin escribir CSS manual.
 - Consistencia visual mediante tokens.
 - Ideal para diseño responsive.
+
+**Autenticación: JWT + bcrypt**
+- JWT: estándar para APIs stateless.
+- bcrypt: hash seguro de contraseñas con salt automático.
 
 **Testing: Jest + Supertest**
 - Jest es el estándar para Node.js.
@@ -471,10 +478,80 @@ Adoptar un **modelo de 4 tablas** con `Agendas` como tabla principal y
 
 ---
 
+## ADR-007: Sistema de autenticación con JWT
+
+**Fecha**: 2026-10-06
+**Estado**: Aceptada
+**Decisor**: Equipo de desarrollo
+
+### Contexto
+
+Necesitábamos agregar autenticación al sistema para:
+
+1. Permitir a los clientes ver y gestionar sus reservaciones desde un panel personal.
+2. Crear un panel administrativo con acceso restringido para el personal.
+3. Vincular reservaciones a cuentas de usuario (en lugar de crear un cliente nuevo por cada reserva).
+
+### Decisión
+
+Implementar autenticación con:
+
+- **JWT** (algoritmo HS256, expiración de 24h) para sesiones sin estado.
+- **bcrypt** (10 rounds) para hashear contraseñas.
+- **Tablas separadas**: `Clientes` (con campos de auth) y `Usuarios` (para admins/staff).
+- **Dos roles**: `cliente` y `admin`/`staff`.
+- **Middlewares** de Express: `verificarToken` y `requireRole`.
+
+### Justificación
+
+**JWT simple (sin refresh tokens)**:
+
+- Adecuado para la escala del proyecto.
+- Sin complejidad de rotación de tokens.
+- El cliente re-loguea al expirar (24h).
+
+**bcrypt**:
+
+- Estándar de facto para hash de contraseñas.
+- Incluye salt automático.
+- Resistente a ataques de fuerza bruta por su factor de costo.
+
+**Tablas separadas** (`Clientes` + `Usuarios`):
+
+- Los clientes y admins tienen diferentes campos y flujos.
+- Más limpio que una tabla única con discriminador.
+- Más seguro: un admin comprometido no puede ver datos de clientes por accidente.
+
+### Consecuencias
+
+**Positivas:**
+
+- API stateless (escalable horizontalmente).
+- Seguridad basada en estándares de la industria.
+- Separación clara entre clientes y personal.
+- Los clientes pueden ver y gestionar sus reservaciones.
+- Los admins tienen un panel dedicado.
+
+**Negativas:**
+
+- JWT no se puede invalidar antes de su expiración (24h).
+- Requiere rotación del `JWT_SECRET` si se filtra.
+- Necesita HTTPS en producción obligatoriamente.
+
+### Alternativas consideradas
+
+1. **Session cookies + Redis**: descartado por requerir infraestructura extra.
+2. **OAuth2 con Google**: descartado por sobre-ingeniería para el alcance.
+3. **Una sola tabla con discriminador `tipo`**: descartado por mezclar dominios.
+4. **JWT + refresh tokens**: descartado por complejidad innecesaria.
+5. **Solo auth de admin**: descartado porque los clientes necesitan ver sus reservas.
+
+---
+
 ## Cómo agregar un nuevo ADR
 
 1. Copiar la plantilla de la sección "Plantilla" abajo.
-2. Asignar el siguiente número secuencial (`ADR-006`, `ADR-007`, etc.).
+2. Asignar el siguiente número secuencial (`ADR-008`, `ADR-009`, etc.).
 3. Rellenar Contexto, Decisión, Justificación y Consecuencias.
 4. Agregar al índice al inicio del documento.
 5. Hacer commit con mensaje `docs: agregar ADR-XXX <título>`.

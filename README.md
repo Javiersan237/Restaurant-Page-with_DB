@@ -7,15 +7,20 @@
 [![SQL Server](https://img.shields.io/badge/sql%20server-%3E%3D2022-red)]()
 
 Sistema de gestión de reservas para el restaurante de alta cocina **ÉLYSÉE**.
-Permite a los clientes reservar mesas en línea y al restaurante administrar
-mesas, horarios, agendas y reservaciones desde una API REST moderna.
+Permite a los clientes reservar mesas en línea, gestionar sus reservaciones
+y al restaurante administrar todo desde un panel administrativo.
 
-## 🔗 Accesos Rápidos a Documentación
-- [Guía de Despliegue en Producción](./docs/guia-despliegue.md)
-- [Glosario del Sistema](./docs/glosario.md)
-- [Registro de Cambios (Changelog)](./CHANGELOG.md)
+---
+
+## 🔗 Accesos rápidos a documentación
+
 - [Especificación de la API](./docs/API.md)
 - [Diagrama Entidad-Relación (ERD)](./docs/ERD.md)
+- [Guía de Autenticación](./docs/AUTENTICACION.md)
+- [Decisiones Técnicas (ADR)](./docs/decisiones.md)
+- [Guía de Despliegue](./docs/guia-despliegue.md)
+- [Glosario del Sistema](./docs/glosario.md)
+- [Registro de Cambios](./CHANGELOG.md)
 
 ---
 
@@ -26,7 +31,7 @@ mesas, horarios, agendas y reservaciones desde una API REST moderna.
 | Backend | Node.js 18+ + Express 5 |
 | Base de datos | SQL Server 2022 |
 | Frontend | React + Vite + Tailwind CSS |
-| Autenticación | JWT (pendiente) |
+| Autenticación | JWT + bcrypt |
 | Documentación | Markdown en `/docs` |
 | CI/CD | GitHub Actions |
 | Contenedores | Docker + Docker Compose |
@@ -36,9 +41,9 @@ mesas, horarios, agendas y reservaciones desde una API REST moderna.
 
 ## 📐 Modelo de datos
 
-El sistema usa **4 tablas** con `Reservaciones` como tabla puente:
+El sistema usa **5 tablas** organizadas alrededor de `Reservaciones` como tabla puente.
 
-```
+```text
 ┌─────────┐                    ┌─────────┐
 │ Clientes│◄──┐                │  Agenda │
 └─────────┘   │                └─────────┘
@@ -50,21 +55,23 @@ El sistema usa **4 tablas** con `Reservaciones` como tabla puente:
                  └──────┬───────┘
                         │
                         ▼
-                   ┌─────────┐
-                   │  Mesa   │
-                   └─────────┘
+                   ┌─────────┐        ┌─────────┐
+                   │  Mesa   │        │ Usuarios│
+                   └─────────┘        └─────────┘
+                                       (admins)
 ```
 
-- **Clientes**: 20 clientes de prueba (5 VIP) vía seeds.
+- **Clientes**: cuentas con autenticación propia (email + password).
 - **Mesas**: 13 mesas distribuidas en 4 zonas (50 personas en total).
 - **Agendas**: bloques de tiempo reservables (30–180 min).
 - **Reservaciones**: unen cliente + mesa + agenda.
+- **Usuarios**: cuentas de administradores y staff.
 
 ---
 
 ## 📁 Estructura del Proyecto
 
-```
+```text
 Restaurant-Page-with_DB/
 ├── .github/                  # Templates de issues, PRs y workflows de CI
 │   ├── ISSUE_TEMPLATE/
@@ -74,9 +81,10 @@ Restaurant-Page-with_DB/
 │   ├── tablas/               # Documentación por tabla
 │   ├── ERD.md
 │   ├── API.md
+│   ├── AUTENTICACION.md
 │   └── decisiones.md
 ├── database/                 # Scripts SQL
-│   ├── migrations/           # 0001 → 0007
+│   ├── migrations/           # 0001 → 0010
 │   ├── seeds/                # Clientes y reservaciones de prueba
 │   ├── queries/              # Consultas reutilizables
 │   └── tests/                # Tests de constraints y queries
@@ -126,12 +134,14 @@ git checkout develop
 ### 2. Instalar dependencias
 
 **Backend:**
+
 ```bash
 cd backend
 npm install
 ```
 
 **Frontend:**
+
 ```bash
 cd ../frontend
 npm install
@@ -140,13 +150,15 @@ npm install
 ### 3. Configurar variables de entorno
 
 **Backend** (`backend/.env`):
+
 ```bash
 cd backend
 cp .env.example .env
 ```
 
 Edita `backend/.env` con tus credenciales reales de SQL Server:
-```
+
+```text
 NODE_ENV=development
 PORT=3000
 DB_HOST=localhost
@@ -156,19 +168,22 @@ DB_USER=sa
 DB_PASSWORD=TuPasswordReal
 DB_ENCRYPT=false
 DB_TRUST_CERT=true
-JWT_SECRET=cambia_esto_por_una_clave_larga
+JWT_SECRET=cambia_esto_por_una_clave_larga_y_aleatoria
+JWT_EXPIRES_IN=1d
 FRONTEND_URL=http://localhost:5173
 LOG_LEVEL=debug
 ```
 
 **Frontend** (`frontend/.env.local`):
+
 ```bash
 cd ../frontend
 cp .env.example .env.local
 ```
 
 Contenido:
-```
+
+```text
 VITE_API_URL=http://localhost:3000/api
 ```
 
@@ -178,20 +193,33 @@ VITE_API_URL=http://localhost:3000/api
 
 1. Asegúrate de que el servicio `SQL Server (SQLEXPRESS)` esté corriendo.
 2. Ejecuta las migraciones en orden (SSMS o sqlcmd):
-   ```
-   database/migrations/0001_DropAndCreateDatabase.sql
-   database/migrations/0002_Create_Clientes.sql
-   database/migrations/0003_Create_Mesas.sql
-   database/migrations/0004_Create_Agendas.sql
-   database/migrations/0005_Create_Reservaciones.sql
-   database/migrations/0006_Create_Indexes.sql
-   database/migrations/0007_Insert_DatosIniciales.sql
-   ```
-3. (Opcional) Carga los seeds:
-   ```
-   database/seeds/seed_clientes.sql
-   database/seeds/seed_reservaciones.sql
-   ```
+
+```text
+database/migrations/0001_DropAndCreateDatabase.sql
+database/migrations/0002_Create_Clientes.sql
+database/migrations/0003_Create_Mesas.sql
+database/migrations/0004_Create_Agendas.sql
+database/migrations/0005_Create_Reservaciones.sql
+database/migrations/0006_Create_Indexes.sql
+database/migrations/0007_Insert_DatosIniciales.sql
+database/migrations/0008_Add_Auth_To_Clientes.sql
+database/migrations/0009_Create_Usuarios.sql
+database/migrations/0010_Insert_Admin_User.sql
+```
+
+3. Actualiza el hash del admin desde el backend:
+
+```bash
+cd backend
+npm run update:admin-password
+```
+
+4. (Opcional) Carga los seeds:
+
+```text
+database/seeds/seed_clientes.sql
+database/seeds/seed_reservaciones.sql
+```
 
 **Opción B — SQL Server en Docker**
 
@@ -200,7 +228,6 @@ docker-compose up -d
 ```
 
 Espera 30 segundos y verifica con `docker ps` que el contenedor esté `healthy`.
-
 Luego ejecuta las migraciones como en la Opción A.
 
 ---
@@ -210,39 +237,93 @@ Luego ejecuta las migraciones como en la Opción A.
 Necesitas **2 terminales** (backend + frontend).
 
 **Terminal 1 — Backend:**
+
 ```bash
 cd backend
 npm run dev
 ```
+
 → Disponible en `http://localhost:3000`
 → Health check: `http://localhost:3000/health`
 
 **Terminal 2 — Frontend:**
+
 ```bash
 cd frontend
 npm run dev
 ```
+
 → Disponible en `http://localhost:5173`
+
+---
+
+## 🔐 Sistema de Autenticación
+
+El sistema soporta dos tipos de usuarios:
+
+| Tipo | Acceso | Cómo iniciar sesión |
+|------|--------|---------------------|
+| **Cliente** | Ver y cancelar sus reservaciones | `/login` o `/registro` |
+| **Admin** | Panel completo de administración | `/admin/login` |
+
+**Credenciales del admin de prueba:**
+
+- **Email**: `admin@elysee.com`
+- **Password**: `Admin123!`
+
+⚠️ **Cambiar en producción**.
+
+**Registro de clientes:**
+
+Los clientes pueden registrarse desde `/registro` con email y contraseña.
+Una vez registrados, pueden reservar mesas sin tener que introducir sus
+datos en cada reservación.
+
+Más detalles en [`docs/AUTENTICACION.md`](./docs/AUTENTICACION.md).
 
 ---
 
 ## 🔌 Endpoints de la API
 
-Todos los endpoints están documentados en [`docs/API.md`](./docs/API.md).
+### Autenticación
 
 | Método | Endpoint | Descripción |
 |:------:|----------|-------------|
-| GET | `/health` | Health check del backend |
-| GET | `/api/mesas` | Lista todas las mesas (con filtros) |
-| GET | `/api/mesas/:id` | Detalle de una mesa |
-| GET | `/api/mesas/disponibles` | Mesas libres para un bloque horario |
-| POST | `/api/clientes` | Crear o recuperar cliente por email |
-| GET | `/api/clientes/:email` | Buscar cliente por email |
-| POST | `/api/reservaciones` | Crear reservación (valida solapamiento) |
-| GET | `/api/reservaciones/:id` | Detalle de una reservación |
-| PATCH | `/api/reservaciones/:id/estado` | Cambiar estado de una reservación |
+| POST | `/api/auth/registro` | Registro de cliente |
+| POST | `/api/auth/login` | Login de cliente |
+| POST | `/api/auth/login-admin` | Login de admin |
+| GET | `/api/auth/me` | Info del usuario actual |
+| POST | `/api/auth/logout` | Cerrar sesión |
+
+### Cliente (requiere JWT)
+
+| Método | Endpoint | Descripción |
+|:------:|----------|-------------|
+| GET | `/api/cliente/reservaciones` | Mis reservaciones |
+| PATCH | `/api/cliente/reservaciones/:id/cancelar` | Cancelar reservación propia |
+
+### Admin (requiere JWT con rol admin)
+
+| Método | Endpoint | Descripción |
+|:------:|----------|-------------|
+| GET | `/api/admin/stats` | Estadísticas generales |
+| GET | `/api/admin/reservaciones` | Todas las reservaciones |
+| PATCH | `/api/admin/reservaciones/:id/estado` | Cambiar estado |
+| GET | `/api/admin/clientes` | Lista de clientes |
+
+### Público
+
+| Método | Endpoint | Descripción |
+|:------:|----------|-------------|
+| GET | `/health` | Health check |
+| GET | `/api/mesas` | Lista de mesas |
+| GET | `/api/mesas/:id` | Detalle de mesa |
+| GET | `/api/mesas/disponibles` | Mesas disponibles |
+| POST | `/api/reservaciones` | Crear reservación (requiere JWT) |
+| GET | `/api/reservaciones/:id` | Detalle de reservación |
 
 **Ejemplo rápido:**
+
 ```bash
 curl http://localhost:3000/api/mesas
 curl "http://localhost:3000/api/mesas/disponibles?fecha=2026-11-01&horaInicio=20:00&duracionMin=120&personas=4"
@@ -256,6 +337,7 @@ curl "http://localhost:3000/api/mesas/disponibles?fecha=2026-11-01&horaInicio=20
 |-----------|-------------|
 | [ERD](./docs/ERD.md) | Diagrama Entidad-Relación |
 | [API](./docs/API.md) | Especificación de endpoints REST |
+| [Autenticación](./docs/AUTENTICACION.md) | Guía del sistema JWT + bcrypt |
 | [Tablas](./docs/tablas/) | Documentación de cada tabla |
 | [Decisiones](./docs/decisiones.md) | Registro de decisiones técnicas (ADR) |
 | [database/README](./database/README.md) | Instrucciones de migraciones, seeds y Docker |
@@ -283,18 +365,22 @@ curl "http://localhost:3000/api/mesas/disponibles?fecha=2026-11-01&horaInicio=20
 ## 🧪 Tests
 
 **Backend:**
+
 ```bash
 cd backend
-npm test          # Jest (con --passWithNoTests)
+npm test          # Jest
 npm run lint      # ESLint
 ```
 
 **Base de datos:**
+
 Ejecutar en SSMS los scripts en `database/tests/`:
+
 - `test_constraints.sql` — 12 tests de CHECK, FK, UNIQUE
 - `test_queries.sql` — 6 tests de estructura y queries
 
 **Frontend:**
+
 ```bash
 cd frontend
 npm test
@@ -311,7 +397,9 @@ npm run db:down   # detiene el contenedor
 npm run db:logs   # ver logs en tiempo real
 ```
 
-**Nota**: si ya tienes SQL Server Express corriendo en el puerto 1433, el contenedor también intentará usarlo y habrá conflicto. Detén el contenedor con `npm run db:down` o cambia el puerto en `docker-compose.yml`.
+**Nota**: si ya tienes SQL Server Express corriendo en el puerto 1433, el
+contenedor también intentará usarlo y habrá conflicto. Detén el contenedor
+con `npm run db:down` o cambia el puerto en `docker-compose.yml`.
 
 Ver [`database/README.md`](./database/README.md) para más detalles.
 
