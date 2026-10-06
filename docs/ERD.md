@@ -1,6 +1,6 @@
 # 🗂️ Diagrama Entidad-Relación (ERD)
 
-Modelo de datos del sistema de reservas **ÉLYSÉE** (v2 — con tabla Agendas).
+Modelo de datos del sistema de reservas **ÉLYSÉE** (v3 — con tabla Agendas + Usuarios).
 
 ## Diagrama visual (Mermaid)
 
@@ -18,7 +18,21 @@ erDiagram
         nvarchar Telefono
         nvarchar Preferencias
         bit EsVIP
+        nvarchar PasswordHash
+        bit Activo
+        datetime UltimoLogin
         datetime FechaRegistro
+    }
+
+    USUARIOS {
+        int UsuarioID PK
+        nvarchar Email UK
+        nvarchar PasswordHash
+        nvarchar Nombre
+        nvarchar Rol
+        bit Activo
+        datetime UltimoLogin
+        datetime FechaCreacion
     }
 
     MESAS {
@@ -53,7 +67,7 @@ erDiagram
 
 ## Diagrama ASCII (respaldo)
 
-```
+```text
 ┌──────────────────────┐              ┌──────────────────────┐
 │      CLIENTES        │              │        MESAS         │
 ├──────────────────────┤              ├──────────────────────┤
@@ -64,6 +78,9 @@ erDiagram
 │    Telefono          │              │    Estado            │
 │    Preferencias      │              └──────────┬───────────┘
 │    EsVIP             │                         │
+│    PasswordHash      │                         │
+│    Activo            │                         │
+│    UltimoLogin       │                         │
 │    FechaRegistro     │                         │
 └──────────┬───────────┘                         │
            │                                     │
@@ -92,6 +109,20 @@ erDiagram
                      │    Estado             │
                      │    FechaCreacion      │
                      └───────────────────────┘
+
+                     ┌───────────────────────┐
+                     │       USUARIOS        │
+                     │  (tabla independiente)│
+                     ├───────────────────────┤
+                     │ 🔑 UsuarioID          │
+                     │    Email (UQ)         │
+                     │    PasswordHash       │
+                     │    Nombre             │
+                     │    Rol                │
+                     │    Activo             │
+                     │    UltimoLogin        │
+                     │    FechaCreacion      │
+                     └───────────────────────┘
 ```
 
 **Leyenda**: 🔑 PK · 🔗 FK · UQ Unique
@@ -104,6 +135,7 @@ erDiagram
 | Mesas → Reservaciones | 1:N | Una mesa puede tener muchas reservaciones |
 | Agendas → Reservaciones | 1:N | Una agenda puede contener muchas reservaciones |
 | Clientes ↔ Mesas ↔ Agendas | N:M:N | Se relacionan a través de Reservaciones |
+| Usuarios | Independiente | Tabla separada para admins y staff |
 
 ## Reglas de Negocio
 
@@ -117,12 +149,17 @@ erDiagram
 8. Los estados válidos de una reservación son: `Pendiente`, `Confirmada`, `Cancelada`, `Completada`, `NoShow`.
 9. Los estados válidos de una mesa son: `Disponible`, `Ocupada`, `Reservada`, `Mantenimiento`.
 10. Los estados válidos de una agenda son: `Abierta`, `Cerrada`.
+11. Un cliente se autentica con email + contraseña (hasheada con bcrypt).
+12. Los administradores están en una tabla separada (`Usuarios`) con rol `admin` o `staff`.
+13. Los endpoints de creación de reservaciones requieren JWT válido de cliente.
+14. Los endpoints de administración requieren JWT con rol `admin` o `staff`.
+15. Los tokens JWT expiran a las 24 horas.
 
 ## Regla de solapamiento (crítica)
 
 Dos reservaciones se solapan si:
 
-```
+```text
 HoraInicio_A < HoraFin_B  AND  HoraFin_A > HoraInicio_B
 ```
 
@@ -143,3 +180,4 @@ La validación se aplica **por mesa**. Dos reservaciones en mesas distintas pued
 - [Mesas](./tablas/02-mesas.md)
 - [Reservaciones](./tablas/03-reservaciones.md)
 - [Agendas](./tablas/04-agendas.md)
+- [Usuarios](./tablas/05-usuarios.md)

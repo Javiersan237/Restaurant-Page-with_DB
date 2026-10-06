@@ -7,10 +7,14 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "jest --coverage",
+    "test": "jest --coverage --runInBand --detectOpenHandles --passWithNoTests",
     "test:watch": "jest --watch",
     "test:db": "node scripts/test-db.js",
-    "lint": "eslint src/**/*.js",
+    "update:admin-password": "node scripts/update-admin-password.js",
+    "db:up": "docker-compose -f ../docker-compose.yml up -d",
+    "db:down": "docker-compose -f ../docker-compose.yml down",
+    "db:logs": "docker-compose -f ../docker-compose.yml logs -f sqlserver",
+    "lint": "eslint src/**/*.js --max-warnings 999",
     "lint:fix": "eslint src/**/*.js --fix",
     "format": "prettier --write \"src/**/*.js\""
   },
@@ -26,12 +30,16 @@
     "node": ">=18.0.0"
   },
   "dependencies": {
+    "bcrypt": "^6.0.0",
     "cors": "^2.8.6",
     "dotenv": "^18.0.4",
     "express": "^5.2.1",
+    "express-rate-limit": "^8.7.0",
     "helmet": "^8.3.0",
+    "jsonwebtoken": "^9.0.3",
     "morgan": "^1.12.1",
-    "mssql": "^12.7.2"
+    "mssql": "^12.7.2",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "eslint": "^10.11.0",

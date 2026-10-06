@@ -1,0 +1,147 @@
+# =====================================================================
+# ELYSEE RESERVAS - CI para el Backend
+# =====================================================================
+# Ejecuta el linter y los tests del backend en cada push y PR.
+# Levanta SQL Server 2022 como servicio para tests de integración.
+# =====================================================================
+
+name: Backend CI
+
+on:
+  push:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'backend/**'
+      - 'database/**'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches:
+      - develop
+      - main
+    paths:
+      - 'backend/**'
+      - 'database/**'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  backend-tests:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    services:
+      sqlserver:
+        image: mcr.microsoft.com/mssql/server:2022-latest
+        env:
+          ACCEPT_EULA: Y
+          MSSQL_SA_PASSWORD: Elysee2026!SA
+          MSSQL_PID: Developer
+        ports:
+          - 1433:1433
+        options: >-
+          --health-cmd "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Elysee2026!SA' -C -Q 'SELECT 1' || exit 1"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+          --health-start-period 30s
+
+    defaults:
+      run:
+        working-directory: ./backend
+
+    steps:
+      - name: Checkout del repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Instalar dependencias
+        run: npm ci
+
+      - name: Esperar a SQL Server
+        run: |
+          echo "Esperando a que SQL Server responda..."
+          for i in {1..30}; do
+            if docker exec $(docker ps -q --filter "ancestor=mcr.microsoft.com/mssql/server:2022-latest") /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Elysee2026!SA' -C -Q "SELECT 1" > /dev/null 2>&1; then
+              echo "SQL Server listo"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "Timeout esperando a SQL Server"
+          exit 1
+        continue-on-error: true
+
+      - name: Instalar sqlcmd
+        run: |
+          curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo apt-key add - || true
+          sudo add-apt-repository "$(curl -sSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list)" || true
+          sudo apt-get update
+          sudo apt-get install -y mssql-tools18 unixodbc-dev || true
+          echo "/opt/mssql-tools18/bin" >> $GITHUB_PATH
+
+      - name: Crear base de datos ElyseeDB
+        run: |
+          sqlcmd -S localhost,1433 -U sa -P 'Elysee2026!SA' -C -Q "CREATE DATABASE ElyseeDB;"
+        continue-on-error: false
+
+      - name: Ejecutar migraciones
+        working-directory: ./
+        run: |
+          for file in database/migrations/*.sql; do
+            echo "Ejecutando $file..."
+            sqlcmd -S localhost,1433 -U sa -P 'Elysee2026!SA' -C -d ElyseeDB -i "$file" || exit 1
+          done
+
+      - name: Ejecutar seeds
+        working-directory: ./
+        run: |
+          sqlcmd -S localhost,1433 -U sa -P 'Elysee2026!SA' -C -d ElyseeDB -i database/seeds/seed_clientes.sql || true
+          sqlcmd -S localhost,1433 -U sa -P 'Elysee2026!SA' -C -d ElyseeDB -i database/seeds/seed_reservaciones.sql || true
+
+      - name: Verificar conexión a la BD
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 1433
+          DB_NAME: ElyseeDB
+          DB_USER: sa
+          DB_PASSWORD: Elysee2026!SA
+          DB_ENCRYPT: 'false'
+          DB_TRUST_CERT: 'true'
+          JWT_SECRET: 'test-secret-ci'
+          LOG_LEVEL: 'error'
+        run: npm run test:db
+
+      - name: Ejecutar linter
+        run: npm run lint
+
+      - name: Ejecutar tests
+        env:
+          NODE_ENV: test
+          DB_HOST: localhost
+          DB_PORT: 1433
+          DB_NAME: ElyseeDB
+          DB_USER: sa
+          DB_PASSWORD: Elysee2026!SA
+          DB_ENCRYPT: 'false'
+          DB_TRUST_CERT: 'true'
+          JWT_SECRET: 'test-secret-ci'
+          LOG_LEVEL: 'error'
+        run: npm test
+
+      - name: Subir reporte de cobertura
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+          if-no-files-found: ignore
+          retention-days: 7

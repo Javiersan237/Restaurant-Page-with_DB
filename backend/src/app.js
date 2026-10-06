@@ -8,15 +8,45 @@ const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
+const rateLimit = require('express-rate-limit');
+
+const { getCorsOptions } = require('./config/cors');
+const errorHandler = require('./middleware/error.middleware');
+const notFoundHandler = require('./middleware/notFound.middleware');
 
 const app = express();
 
-app.use(helmet());
-app.use(cors());
-app.use(morgan('dev'));
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+// ---------------------------------------------------------------------
+// Rate limiting (100 requests por 15 min por IP)
+// ---------------------------------------------------------------------
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: process.env.NODE_ENV === 'production' ? 100 : 1000,
+  message: {
+    error: {
+      code: 'RATE_LIMIT_EXCEEDED',
+      message: 'Demasiadas peticiones. Intenta de nuevo en 15 minutos.',
+    },
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
 
+// ---------------------------------------------------------------------
+// Middlewares globales
+// ---------------------------------------------------------------------
+app.use(helmet());
+app.use(cors(getCorsOptions()));
+app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(limiter);
+
+// ---------------------------------------------------------------------
+// Rutas
+// ---------------------------------------------------------------------
+
+// Health check
 app.get('/health', (req, res) => {
   res.json({
     status: 'ok',
@@ -24,9 +54,11 @@ app.get('/health', (req, res) => {
     version: '0.1.0',
     timestamp: new Date().toISOString(),
     uptime: process.uptime(),
+    environment: process.env.NODE_ENV || 'development',
   });
 });
 
+// Raiz
 app.get('/', (req, res) => {
   res.json({
     name: 'ELYSEE Reservas API',
@@ -36,15 +68,7 @@ app.get('/', (req, res) => {
   });
 });
 
-// TODO: Rutas de la API (se agregan en issues posteriores)
-// app.use('/api/clientes', require('./routes/clientes.routes'));
-// app.use('/api/mesas', require('./routes/mesas.routes'));
-// app.use('/api/reservaciones', require('./routes/reservaciones.routes'));
 
-// ---------------------------------------------------------------------
-// Endpoint temporal de prueba de conexion a la BD
-// (se elimina cuando haya endpoints reales)
-// ---------------------------------------------------------------------
 app.get('/api/db-test', async (req, res, next) => {
   try {
     const { getPool } = require('./config/database');
@@ -72,26 +96,18 @@ app.get('/api/db-test', async (req, res, next) => {
   }
 });
 
-app.use((req, res) => {
-  res.status(404).json({
-    error: {
-      code: 'NOT_FOUND',
-      message: `Ruta no encontrada: ${req.method} ${req.originalUrl}`,
-    },
-  });
-});
+// Rutas de la API
+app.use('/api/auth', require('./routes/auth.routes'));
+app.use('/api/mesas', require('./routes/mesas.routes'));
+app.use('/api/clientes', require('./routes/clientes.routes'));
+app.use('/api/reservaciones', require('./routes/reservaciones.routes'));
+app.use('/api/cliente', require('./routes/cliente.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
 
-app.use((err, req, res, next) => {
-  console.error('[ERROR]', err.message);
-  if (process.env.NODE_ENV === 'development') {
-    console.error(err.stack);
-  }
-  res.status(err.status || 500).json({
-    error: {
-      code: err.code || 'INTERNAL_ERROR',
-      message: err.message || 'Error interno del servidor',
-    },
-  });
-});
+// ---------------------------------------------------------------------
+// Middlewares de cierre (SIEMPRE al final)
+// ---------------------------------------------------------------------
+app.use(notFoundHandler);
+app.use(errorHandler);
 
 module.exports = app;
