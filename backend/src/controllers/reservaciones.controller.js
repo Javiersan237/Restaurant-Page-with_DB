@@ -12,7 +12,10 @@ const reservacionesService = require('../services/reservaciones.service');
  */
 async function crear(req, res, next) {
   try {
-    const { reservacion, agendaCreada } = await reservacionesService.crear(req.body);
+    const { reservacion, agendaCreada } = await reservacionesService.crear(
+      req.body,
+      req.user.userID,
+    );
 
     res.status(201).json({
       data: reservacion,

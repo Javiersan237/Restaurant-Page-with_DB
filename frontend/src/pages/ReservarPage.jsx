@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import ReservaForm from '../components/ReservaForm'
 import MesaCard from '../components/MesaCard'
 import { useDisponibilidad } from '../hooks/useDisponibilidad'
-import { buscarClientePorEmail, crearCliente } from '../services/clientes.api'
+import { useAuth } from '../context/AuthContext'
 import { crearReservacion } from '../services/reservaciones.api'
 
 const PASO_FORM = 'form'
@@ -11,9 +11,10 @@ const PASO_MESA = 'mesa'
 
 export default function ReservarPage() {
   const navigate = useNavigate()
+  const { user } = useAuth()
 
   const [paso, setPaso] = useState(PASO_FORM)
-  const [datosForm, setDatosForm] = useState(null)
+  const [datosReservacion, setDatosReservacion] = useState(null)
   const [mesaSeleccionada, setMesaSeleccionada] = useState(null)
   const [cargando, setCargando] = useState(false)
   const [error, setError] = useState(null)
@@ -22,7 +23,7 @@ export default function ReservarPage() {
     useDisponibilidad()
 
   const manejarDatosForm = async (data) => {
-    setDatosForm(data)
+    setDatosReservacion(data.reservacion)
     setError(null)
     setCargando(true)
 
@@ -38,37 +39,20 @@ export default function ReservarPage() {
   }
 
   const manejarConfirmarReserva = async () => {
-    if (!mesaSeleccionada || !datosForm) return
+    if (!mesaSeleccionada || !datosReservacion) return
 
     setCargando(true)
     setError(null)
 
     try {
-      const { cliente, reservacion } = datosForm
-
-      // 1) Buscar o crear cliente
-      let clienteID
-      try {
-        const existente = await buscarClientePorEmail(cliente.email)
-        clienteID = existente?.data?.clienteID || existente?.data?.ClienteID
-      } catch (err) {
-        if (err.status === 404) {
-          const nuevo = await crearCliente(cliente)
-          clienteID = nuevo?.data?.clienteID || nuevo?.data?.ClienteID
-        } else {
-          throw err
-        }
-      }
-
-      // 2) Crear la reservación
+      // Crear la reservación (el backend usa el JWT para el clienteID)
       const nuevaReservacion = await crearReservacion({
-        clienteID,
         mesaID: mesaSeleccionada.mesaID || mesaSeleccionada.MesaID,
-        fecha: reservacion.fecha,
-        horaInicio: reservacion.horaInicio,
-        duracionMin: reservacion.duracionMin,
-        numeroPersonas: reservacion.numeroPersonas,
-        notas: reservacion.notas,
+        fecha: datosReservacion.fecha,
+        horaInicio: datosReservacion.horaInicio,
+        duracionMin: datosReservacion.duracionMin,
+        numeroPersonas: datosReservacion.numeroPersonas,
+        notas: datosReservacion.notas,
       })
 
       const idReservacion =
@@ -92,7 +76,7 @@ export default function ReservarPage() {
         </h1>
         <div className="w-16 h-px bg-dorado-400 mx-auto mb-6"></div>
         <p className="text-negro-200 font-serif italic">
-          {paso === PASO_FORM && 'Completa tus datos para comenzar'}
+          {paso === PASO_FORM && `Bienvenido, ${user?.nombre}. Elige los detalles de tu reservación.`}
           {paso === PASO_MESA && 'Selecciona la mesa perfecta para ti'}
         </p>
       </div>
@@ -100,7 +84,7 @@ export default function ReservarPage() {
       <div className="flex items-center justify-center gap-4 mb-12">
         <div className={`flex items-center gap-2 ${paso === PASO_FORM ? 'text-dorado-400' : 'text-negro-400'}`}>
           <span className={`w-8 h-8 rounded-full border flex items-center justify-center text-sm ${paso === PASO_FORM ? 'border-dorado-400 bg-dorado-400/20' : 'border-negro-400'}`}>1</span>
-          <span className="font-serif text-sm tracking-wider">Datos</span>
+          <span className="font-serif text-sm tracking-wider">Detalles</span>
         </div>
         <div className="w-12 h-px bg-negro-500"></div>
         <div className={`flex items-center gap-2 ${paso === PASO_MESA ? 'text-dorado-400' : 'text-negro-400'}`}>
@@ -117,10 +101,10 @@ export default function ReservarPage() {
         {paso === PASO_MESA && (
           <div className="space-y-6">
             <div className="bg-negro-800 border border-dorado-400/20 rounded p-4 text-sm text-negro-100">
-              <p><span className="text-dorado-300">Fecha:</span> {datosForm?.reservacion.fecha}</p>
-              <p><span className="text-dorado-300">Hora:</span> {datosForm?.reservacion.horaInicio}</p>
-              <p><span className="text-dorado-300">Duración:</span> {datosForm?.reservacion.duracionMin} min</p>
-              <p><span className="text-dorado-300">Personas:</span> {datosForm?.reservacion.numeroPersonas}</p>
+              <p><span className="text-dorado-300">Fecha:</span> {datosReservacion?.fecha}</p>
+              <p><span className="text-dorado-300">Hora:</span> {datosReservacion?.horaInicio}</p>
+              <p><span className="text-dorado-300">Duración:</span> {datosReservacion?.duracionMin} min</p>
+              <p><span className="text-dorado-300">Personas:</span> {datosReservacion?.numeroPersonas}</p>
             </div>
 
             {cargandoMesas && (

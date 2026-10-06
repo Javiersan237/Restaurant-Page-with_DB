@@ -97,9 +97,12 @@ app.get('/api/db-test', async (req, res, next) => {
 });
 
 // Rutas de la API
+app.use('/api/auth', require('./routes/auth.routes'));
 app.use('/api/mesas', require('./routes/mesas.routes'));
 app.use('/api/clientes', require('./routes/clientes.routes'));
 app.use('/api/reservaciones', require('./routes/reservaciones.routes'));
+app.use('/api/cliente', require('./routes/cliente.routes'));
+app.use('/api/admin', require('./routes/admin.routes'));
 
 // ---------------------------------------------------------------------
 // Middlewares de cierre (SIEMPRE al final)

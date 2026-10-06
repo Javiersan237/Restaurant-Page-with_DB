@@ -1,8 +1,11 @@
 import { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 export default function Navbar() {
   const [menuAbierto, setMenuAbierto] = useState(false)
+  const { estaLogueado, esAdmin, esCliente, user, logout } = useAuth()
+  const navigate = useNavigate()
 
   const links = [
     { to: '/', label: 'Inicio' },
@@ -14,6 +17,12 @@ export default function Navbar() {
     `font-serif tracking-widest uppercase text-sm transition-colors duration-300 ${
       isActive ? 'text-dorado-400' : 'text-dorado-100 hover:text-dorado-400'
     }`
+
+  const handleLogout = () => {
+    logout()
+    setMenuAbierto(false)
+    navigate('/')
+  }
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 bg-negro-900/95 backdrop-blur-sm border-b border-dorado-400/20">
@@ -30,6 +39,44 @@ export default function Navbar() {
               {link.label}
             </NavLink>
           ))}
+
+          {/* Separador */}
+          <div className="w-px h-5 bg-dorado-400/30" />
+
+          {/* Estado de sesión */}
+          {!estaLogueado && (
+            <NavLink to="/login" className={linkClass}>
+              Iniciar Sesión
+            </NavLink>
+          )}
+
+          {estaLogueado && esCliente && (
+            <>
+              <NavLink to="/mi-cuenta" className={linkClass}>
+                Mi Cuenta
+              </NavLink>
+              <button
+                onClick={handleLogout}
+                className="font-serif tracking-widest uppercase text-sm text-dorado-100 hover:text-red-400 transition-colors"
+              >
+                Salir
+              </button>
+            </>
+          )}
+
+          {estaLogueado && esAdmin && (
+            <>
+              <NavLink to="/admin" className={linkClass}>
+                Panel Admin
+              </NavLink>
+              <button
+                onClick={handleLogout}
+                className="font-serif tracking-widest uppercase text-sm text-dorado-100 hover:text-red-400 transition-colors"
+              >
+                Salir
+              </button>
+            </>
+          )}
         </div>
 
         {/* Botón menú móvil */}
@@ -62,6 +109,56 @@ export default function Navbar() {
                 {link.label}
               </NavLink>
             ))}
+
+            {/* Separador */}
+            <div className="h-px bg-dorado-400/20 my-2" />
+
+            {/* Estado de sesión (movil) */}
+            {!estaLogueado && (
+              <NavLink
+                to="/login"
+                className={linkClass}
+                onClick={() => setMenuAbierto(false)}
+              >
+                Iniciar Sesión
+              </NavLink>
+            )}
+
+            {estaLogueado && esCliente && (
+              <>
+                <NavLink
+                  to="/mi-cuenta"
+                  className={linkClass}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Mi Cuenta
+                </NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="text-left font-serif tracking-widest uppercase text-sm text-dorado-100 hover:text-red-400"
+                >
+                  Cerrar Sesión
+                </button>
+              </>
+            )}
+
+            {estaLogueado && esAdmin && (
+              <>
+                <NavLink
+                  to="/admin"
+                  className={linkClass}
+                  onClick={() => setMenuAbierto(false)}
+                >
+                  Panel Admin
+                </NavLink>
+                <button
+                  onClick={handleLogout}
+                  className="text-left font-serif tracking-widest uppercase text-sm text-dorado-100 hover:text-red-400"
+                >
+                  Cerrar Sesión
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

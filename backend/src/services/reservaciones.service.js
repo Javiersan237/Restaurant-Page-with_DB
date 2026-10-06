@@ -8,19 +8,6 @@ const { getPool, sql } = require('../config/database');
 const reservacionModel = require('../models/reservacion.model');
 const agendaModel = require('../models/agenda.model');
 const clienteModel = require('../models/cliente.model');
-const clientesService = require('./clientes.service');
-
-// Mapa de transiciones permitidas por estado
-const TRANSICIONES = {
-  Pendiente: ['Confirmada', 'Cancelada'],
-  Confirmada: ['Completada', 'Cancelada', 'NoShow'],
-  Cancelada: [],
-  Completada: [],
-  NoShow: [],
-};
-
-// Estados válidos
-const ESTADOS_VALIDOS = ['Pendiente', 'Confirmada', 'Cancelada', 'Completada', 'NoShow'];
 
 const CAPACIDAD_GLOBAL_RESTAURANTE = 50;
 const HORA_APERTURA = 8;
@@ -28,9 +15,6 @@ const HORA_CIERRE = 23;
 
 /**
  * Calcula la hora de fin a partir de la hora de inicio + duracion.
- * @param {string} horaInicio - Formato "HH:MM"
- * @param {number} duracionMin
- * @returns {string} Formato "HH:MM"
  */
 function calcularHoraFin(horaInicio, duracionMin) {
   const [horas, minutos] = horaInicio.split(':').map(Number);
@@ -41,16 +25,30 @@ function calcularHoraFin(horaInicio, duracionMin) {
 }
 
 /**
+ * Formatea una fecha (DATE de SQL Server) como "YYYY-MM-DD".
+ */
+function formatFecha(d) {
+  if (!d) return null;
+  const date = new Date(d);
+  return date.toISOString().split('T')[0];
+}
+
+/**
+ * Formatea una hora (TIME de SQL Server) como "HH:MM".
+ */
+function formatHora(t) {
+  if (!t) return null;
+  const date = new Date(t);
+  const horas = String(date.getUTCHours()).padStart(2, '0');
+  const minutos = String(date.getUTCMinutes()).padStart(2, '0');
+  return `${horas}:${minutos}`;
+}
+
+/**
  * Valida el body del request de creacion de reservacion.
- * @param {Object} body
  */
 function validarBody(body) {
   const errores = [];
-
-  // Cliente: clienteID o cliente
-  if (!body.clienteID && !body.cliente) {
-    errores.push({ field: 'clienteID', message: 'Debes enviar clienteID o cliente' });
-  }
 
   if (!body.mesaID) {
     errores.push({ field: 'mesaID', message: 'El mesaID es requerido' });
@@ -85,11 +83,24 @@ function validarBody(body) {
 
 /**
  * Crea una reservacion con validaciones completas en transaccion.
- * @param {Object} body
- * @returns {Promise<Object>} { reservacion, agendaCreada }
  */
-async function crear(body) {
+async function crear(body, clienteID) {
   validarBody(body);
+
+  if (!clienteID) {
+    const error = new Error('Se requiere autenticacion para crear una reservacion');
+    error.status = 401;
+    error.code = 'UNAUTHORIZED';
+    throw error;
+  }
+
+  const cliente = await clienteModel.findById(clienteID);
+  if (!cliente) {
+    const error = new Error(`No existe el cliente con ID ${clienteID}`);
+    error.status = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
 
   const duracion = parseInt(body.duracionMin, 10);
   const personas = parseInt(body.numeroPersonas, 10);
@@ -105,10 +116,8 @@ async function crear(body) {
     throw error;
   }
 
-  // Calcular horaFin
   const horaFin = calcularHoraFin(body.horaInicio, duracion);
 
-  // Validar rango horario del restaurante
   const horaFinNum = parseInt(horaFin.split(':')[0], 10);
   if (horaFinNum > HORA_CIERRE) {
     const error = new Error(`El horario excede el cierre del restaurante (${HORA_CIERRE}:00)`);
@@ -117,23 +126,6 @@ async function crear(body) {
     throw error;
   }
 
-  // Resolver clienteID
-  let clienteID = body.clienteID;
-  if (!clienteID && body.cliente) {
-    const resultado = await clientesService.crearObtener(body.cliente);
-    clienteID = resultado.cliente.clienteID;
-  } else {
-    // Verificar que el cliente existe
-    const cliente = await clienteModel.findById(clienteID);
-    if (!cliente) {
-      const error = new Error(`No existe el cliente con ID ${clienteID}`);
-      error.status = 404;
-      error.code = 'NOT_FOUND';
-      throw error;
-    }
-  }
-
-  // Verificar capacidad de la mesa
   const capacidadMesa = await reservacionModel.getCapacidadMesa(body.mesaID);
   if (capacidadMesa === null) {
     const error = new Error(`No existe la mesa con ID ${body.mesaID}`);
@@ -181,7 +173,9 @@ async function crear(body) {
 
     if (personasOcupadas + personas > CAPACIDAD_GLOBAL_RESTAURANTE) {
       await transaction.rollback();
-      const error = new Error(`El restaurante alcanzo su capacidad maxima (${CAPACIDAD_GLOBAL_RESTAURANTE} personas) en ese horario`);
+      const error = new Error(
+        `El restaurante alcanzo su capacidad maxima (${CAPACIDAD_GLOBAL_RESTAURANTE} personas) en ese horario`,
+      );
       error.status = 409;
       error.code = 'RESTAURANT_FULL';
       throw error;
@@ -237,9 +231,7 @@ async function crear(body) {
 }
 
 /**
- * Obtiene una reservacion por ID con todos sus datos relacionados.
- * @param {number} reservacionID
- * @returns {Promise<Object>}
+ * Obtiene una reservacion por ID.
  */
 async function obtenerPorId(reservacionID) {
   const id = parseInt(reservacionID, 10);
@@ -261,11 +253,19 @@ async function obtenerPorId(reservacionID) {
   return reservacion;
 }
 
+// Mapa de transiciones permitidas por estado
+const TRANSICIONES = {
+  Pendiente: ['Confirmada', 'Cancelada'],
+  Confirmada: ['Completada', 'Cancelada', 'NoShow'],
+  Cancelada: [],
+  Completada: [],
+  NoShow: [],
+};
+
+const ESTADOS_VALIDOS = ['Pendiente', 'Confirmada', 'Cancelada', 'Completada', 'NoShow'];
+
 /**
  * Cambia el estado de una reservacion con validacion de transiciones.
- * @param {number} reservacionID
- * @param {string} nuevoEstado
- * @returns {Promise<Object>} Reservacion actualizada
  */
 async function cambiarEstado(reservacionID, nuevoEstado) {
   const id = parseInt(reservacionID, 10);
@@ -283,7 +283,6 @@ async function cambiarEstado(reservacionID, nuevoEstado) {
     throw error;
   }
 
-  // Obtener el estado actual
   const estadoActual = await reservacionModel.getEstado(id);
   if (!estadoActual) {
     const error = new Error(`No se encontro la reservacion con ID ${id}`);
@@ -292,7 +291,6 @@ async function cambiarEstado(reservacionID, nuevoEstado) {
     throw error;
   }
 
-  // Verificar que la transicion este permitida
   const permitidos = TRANSICIONES[estadoActual] || [];
   if (!permitidos.includes(nuevoEstado)) {
     const error = new Error(
@@ -308,15 +306,105 @@ async function cambiarEstado(reservacionID, nuevoEstado) {
     throw error;
   }
 
-  // Actualizar
   await reservacionModel.updateEstado(id, nuevoEstado);
 
-  // Devolver la reservacion completa actualizada
   return reservacionModel.findById(id);
+}
+
+/**
+ * Obtiene todas las reservaciones de un cliente.
+ */
+async function listarPorCliente(clienteID) {
+  const pool = await getPool();
+  const result = await pool
+    .request()
+    .input('ClienteID', sql.Int, clienteID)
+    .query(`
+      SELECT 
+        r.ReservacionID     AS reservacionID,
+        r.NumeroPersonas    AS numeroPersonas,
+        r.Estado            AS estado,
+        r.Notas             AS notas,
+        r.FechaCreacion     AS fechaCreacion,
+        m.MesaID            AS mesaID,
+        m.NumeroMesa        AS numeroMesa,
+        m.Ubicacion         AS mesaUbicacion,
+        a.AgendaID          AS agendaID,
+        a.Fecha             AS agendaFecha,
+        a.HoraInicio        AS agendaHoraInicio,
+        a.HoraFin           AS agendaHoraFin,
+        a.DuracionMin       AS agendaDuracionMin
+      FROM dbo.Reservaciones r
+      INNER JOIN dbo.Mesas   m ON m.MesaID   = r.MesaID
+      INNER JOIN dbo.Agendas a ON a.AgendaID = r.AgendaID
+      WHERE r.ClienteID = @ClienteID
+      ORDER BY a.Fecha DESC, a.HoraInicio DESC
+    `);
+
+  return result.recordset.map((row) => ({
+    reservacionID: row.reservacionID,
+    numeroPersonas: row.numeroPersonas,
+    estado: row.estado,
+    notas: row.notas,
+    fechaCreacion: row.fechaCreacion,
+    mesa: {
+      mesaID: row.mesaID,
+      numeroMesa: row.numeroMesa,
+      ubicacion: row.mesaUbicacion,
+    },
+    agenda: {
+      agendaID: row.agendaID,
+      fecha: formatFecha(row.agendaFecha),
+      horaInicio: formatHora(row.agendaHoraInicio),
+      horaFin: formatHora(row.agendaHoraFin),
+      duracionMin: row.agendaDuracionMin,
+    },
+  }));
+}
+
+/**
+ * Cancela una reservacion del cliente.
+ */
+async function cancelarPropia(reservacionID, clienteID) {
+  const pool = await getPool();
+
+  const check = await pool
+    .request()
+    .input('ReservacionID', sql.Int, reservacionID)
+    .input('ClienteID', sql.Int, clienteID)
+    .query(`
+      SELECT Estado FROM dbo.Reservaciones
+      WHERE ReservacionID = @ReservacionID AND ClienteID = @ClienteID
+    `);
+
+  if (check.recordset.length === 0) {
+    const error = new Error('No se encontro la reservacion o no te pertenece');
+    error.status = 404;
+    error.code = 'NOT_FOUND';
+    throw error;
+  }
+
+  const estadoActual = check.recordset[0].Estado;
+
+  if (estadoActual === 'Cancelada' || estadoActual === 'Completada' || estadoActual === 'NoShow') {
+    const error = new Error(`No se puede cancelar una reservacion en estado ${estadoActual}`);
+    error.status = 422;
+    error.code = 'INVALID_STATE_TRANSITION';
+    throw error;
+  }
+
+  await pool
+    .request()
+    .input('ReservacionID', sql.Int, reservacionID)
+    .query(`UPDATE dbo.Reservaciones SET Estado = 'Cancelada' WHERE ReservacionID = @ReservacionID`);
+
+  return reservacionModel.findById(reservacionID);
 }
 
 module.exports = {
   crear,
   obtenerPorId,
   cambiarEstado,
+  listarPorCliente,
+  cancelarPropia,
 };

@@ -2,19 +2,16 @@ import { useForm, validadores } from '../hooks/useForm'
 
 /**
  * Formulario de reservación de ÉLYSÉE.
+ * Solo pide datos de la reservación. Los datos del cliente ya están
+ * en el contexto de autenticación.
  *
- * @param {Function} onSiguiente - Callback que se ejecuta cuando el form es válido.
- *                                 Recibe { cliente, reservacion } como argumento.
+ * @param {Function} onSiguiente - Callback con { reservacion }
  * @param {boolean} cargando     - Si el padre está procesando la petición.
  * @param {string} errorExterno  - Error que viene del backend.
  */
 export default function ReservaForm({ onSiguiente, cargando = false, errorExterno = null }) {
   const { valores, errores, manejarCambio, manejarBlur, validar } = useForm(
     {
-      nombre: '',
-      apellido: '',
-      email: '',
-      telefono: '',
       fecha: '',
       horaInicio: '',
       duracionMin: 120,
@@ -22,10 +19,6 @@ export default function ReservaForm({ onSiguiente, cargando = false, errorExtern
       notas: '',
     },
     {
-      nombre: validadores.requerido('El nombre es obligatorio'),
-      apellido: validadores.requerido('El apellido es obligatorio'),
-      email: validadores.email,
-      telefono: validadores.telefono,
       fecha: validadores.fechaFutura,
       horaInicio: validadores.requerido('La hora es obligatoria'),
       duracionMin: validadores.numeroPositivo(30, 180),
@@ -38,12 +31,6 @@ export default function ReservaForm({ onSiguiente, cargando = false, errorExtern
     if (!validar()) return
 
     onSiguiente?.({
-      cliente: {
-        nombre: valores.nombre.trim(),
-        apellido: valores.apellido.trim(),
-        email: valores.email.trim().toLowerCase(),
-        telefono: valores.telefono.trim() || null,
-      },
       reservacion: {
         fecha: valores.fecha,
         horaInicio: valores.horaInicio,
@@ -75,51 +62,10 @@ export default function ReservaForm({ onSiguiente, cargando = false, errorExtern
 
   return (
     <form onSubmit={manejarSubmit} className="space-y-6">
-      {/* DATOS DEL CLIENTE */}
-      <div>
-        <h3 className="font-serif text-2xl text-dorado-400 mb-4 tracking-widest">
-          Tus datos
-        </h3>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="nombre" className={labelClass}>Nombre *</label>
-            <input id="nombre" name="nombre" type="text" value={valores.nombre}
-              onChange={manejarCambio} onBlur={manejarBlur}
-              placeholder="Sofía" className={inputClass('nombre')} disabled={cargando} />
-            {errores.nombre && <p className="text-red-400 text-xs mt-1">{errores.nombre}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="apellido" className={labelClass}>Apellido *</label>
-            <input id="apellido" name="apellido" type="text" value={valores.apellido}
-              onChange={manejarCambio} onBlur={manejarBlur}
-              placeholder="García" className={inputClass('apellido')} disabled={cargando} />
-            {errores.apellido && <p className="text-red-400 text-xs mt-1">{errores.apellido}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="email" className={labelClass}>Email *</label>
-            <input id="email" name="email" type="email" value={valores.email}
-              onChange={manejarCambio} onBlur={manejarBlur}
-              placeholder="sofia@ejemplo.com" className={inputClass('email')} disabled={cargando} />
-            {errores.email && <p className="text-red-400 text-xs mt-1">{errores.email}</p>}
-          </div>
-
-          <div>
-            <label htmlFor="telefono" className={labelClass}>Teléfono</label>
-            <input id="telefono" name="telefono" type="tel" value={valores.telefono}
-              onChange={manejarCambio} onBlur={manejarBlur}
-              placeholder="+52 55 1234 5678" className={inputClass('telefono')} disabled={cargando} />
-            {errores.telefono && <p className="text-red-400 text-xs mt-1">{errores.telefono}</p>}
-          </div>
-        </div>
-      </div>
-
       {/* DATOS DE LA RESERVACIÓN */}
       <div>
         <h3 className="font-serif text-2xl text-dorado-400 mb-4 tracking-widest">
-          Tu reservación
+          Detalles de tu reservación
         </h3>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -145,7 +91,7 @@ export default function ReservaForm({ onSiguiente, cargando = false, errorExtern
           </div>
 
           <div>
-            <label htmlFor="duracionMin" className={labelClass}>Duración (min) *</label>
+            <label htmlFor="duracionMin" className={labelClass}>Duración *</label>
             <select id="duracionMin" name="duracionMin" value={valores.duracionMin}
               onChange={manejarCambio} onBlur={manejarBlur}
               className={inputClass('duracionMin')} disabled={cargando}>
